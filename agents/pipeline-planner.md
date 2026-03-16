@@ -113,6 +113,13 @@ This helps the user understand trade-offs at Checkpoint 2.
 - **Layout specifications**: [ASCII diagrams from figma_context]
 [If figma_context was not provided, note: "No Figma designs analyzed — UI tasks may need refinement once designs are available."]
 
+## Task Granularity Guidance
+[Explicit notes for the breakdown agent about what should be combined vs split:]
+- [Example: "VoucherBanner — all states (unapplied, applied) in ONE task, not split across tickets"]
+- [Example: "Config flag + version gating = ONE task"]
+- [Example: "API model (TASK) → Mapper (TASK) → UI (TASK) — these are separate layers, keep separate"]
+- [Example: "Wiring task connects banner to parent VC — always human, always last"]
+
 ## Risks & Mitigations
 - **Risk 1**: [Description] → Mitigation: [Action]
 - **Risk 2**: [Description] → Mitigation: [Action]
@@ -135,3 +142,4 @@ This helps the user understand trade-offs at Checkpoint 2.
 10. **Include UI only if feature_input.yaml has UI in scope**
 11. **Use Figma context when available** — if figma_context has design tokens and component lists, reference them in architecture decisions and UI phases. Never plan UI work that contradicts what Figma shows.
 12. **Flag missing Figma as a risk** — if the feature has UI scope but figma_context is `not_provided` or `error`, add a risk: "UI tasks may need revision once Figma designs are analyzed"
+13. **Task Granularity Guidance is mandatory** — explicitly tell the breakdown agent what to combine and what to split. This prevents over-splitting (splitting UI states across tickets) and under-splitting (combining layers in one ticket).

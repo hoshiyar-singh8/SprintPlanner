@@ -51,6 +51,10 @@ def validate(file_path):
     if not re.search(r"##\s*(Scope|In Scope|Scope\s*(&|and)\s*Boundaries)", content, re.IGNORECASE):
         print("WARN: No Scope section found — recommended but not required")
 
+    # Check for Task Granularity Guidance (recommended)
+    if not re.search(r"##\s*Task\s*Granularity", content, re.IGNORECASE):
+        print("WARN: No Task Granularity Guidance section — recommended to prevent over/under-splitting")
+
     # Basic content length check
     if len(content.strip()) < 500:
         errors.append("Plan appears too short (< 500 chars) — likely incomplete")
