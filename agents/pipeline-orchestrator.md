@@ -77,12 +77,21 @@ For each stage:
   - Collect user answers (numbered, by group)
   - Update clarifications.md with answers in User Answers section
   - Fill Planning Decisions and Open Questions sections
+- **★ FIGMA GATE** (after collecting user answers):
+  - Check if clarifications.md Group 7 detected Figma references in the RFC
+  - If Figma references were detected AND no `figma_urls` in `feature_input.yaml`:
+    1. **Ask the user explicitly**: "The RFC references Figma designs but no Figma URL was provided. Please share the Figma URL(s) for this feature so the pipeline can analyze the designs and produce accurate UI tasks."
+    2. **Block progression** until at least one Figma URL is provided (or user explicitly says "proceed without Figma")
+    3. Update `feature_input.yaml` with the collected `figma_urls`
+  - If user provides URL(s): validate format (`figma.com/design/...` or `figma.com/file/...`), extract fileKey and nodeId, store in `feature_input.yaml`
+  - If user says "proceed without Figma": log warning, mark `figma_context` as `skipped_by_user` in pipeline state, continue
 
 ### Stage 2: Context
 - Agent: `pipeline-context`
-- Prompt: "Scan the repo at [repo_path] and analyze Figma URLs to produce context_pack.yaml in [feature_dir]."
+- Prompt: "Scan the repo at [repo_path] and analyze Figma URLs to produce context_pack.yaml in [feature_dir]. Figma URLs: [figma_urls from feature_input.yaml]. IMPORTANT: If Figma URLs are present, you MUST call get_design_context for each URL and include figma_context in the output."
 - Run: `python3 ~/.claude/hooks/compress_context.py <path>`
 - Validate: `python3 ~/.claude/hooks/validate_context.py <path>`
+- **Post-validation check**: If `feature_input.yaml` has `figma_urls` but `context_pack.yaml` has no `figma_context` section → fail validation and retry with explicit instruction to call Figma MCP
 
 ### Stage 3: Planning
 - Agent: `pipeline-planner` (model: opus)

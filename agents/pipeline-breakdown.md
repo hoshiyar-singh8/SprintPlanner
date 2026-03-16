@@ -26,13 +26,19 @@ Read ALL three files before creating tasks.
 ## Workflow
 
 1. **Read all inputs** — understand phases, architecture, and constraints
-2. **For each phase**, identify concrete work items
-3. **Split each work item** into single-layer tasks using task decomposition rules
-4. **Size each task** using story point criteria (1/2/3 scale)
-5. **Auto-split any task >3 SP** or any that crosses layers
-6. **Map dependencies** between tasks
-7. **Verify DAG** — no cycles, valid topological order
-8. **Write `task_specs.yaml`** to the feature directory
+2. **Check figma_context in context_pack.yaml** — if `figma_context.status: analyzed`:
+   - Extract all `new_components` and `modified_components` from each screen
+   - Each new UI component from Figma = at least one `ui` layer task
+   - Include Figma-specific acceptance criteria: Bento token names, spacing values, corner radius
+   - Reference ASCII layout diagrams in `implementation_notes`
+   - Add `design_tokens` section to UI tasks listing the exact tokens to use
+3. **For each phase**, identify concrete work items (including Figma-driven UI work)
+4. **Split each work item** into single-layer tasks using task decomposition rules
+5. **Size each task** using story point criteria (1/2/3 scale)
+6. **Auto-split any task >3 SP** or any that crosses layers
+7. **Map dependencies** between tasks
+8. **Verify DAG** — no cycles, valid topological order
+9. **Write `task_specs.yaml`** to the feature directory
 
 ## Output: task_specs.yaml
 
@@ -74,6 +80,35 @@ tasks:
     implementation_notes: "Follow EnrolmentVoucherBannerApiModel pattern"
     reference_file: "Subscription/Source/Api/Models/EDResponseModels/EnrolmentVoucherBannerApiModel.swift"
     testing_notes: "Test Codable decoding with sample JSON"
+
+  - id: TASK-003
+    title: "Build VoucherBannerView with Bento tokens"
+    layer: ui
+    sp: 2
+    phase: 3
+    depends_on: [TASK-002]
+    acceptance_criteria:
+      - "Banner renders applied and manual_apply states"
+      - "Uses Bento.Color.proGreen for success state"
+      - "Spacing matches Figma: 16pt horizontal, 12pt vertical"
+      - "Corner radius uses Bento.CornerRadius.medium"
+    files_to_create:
+      - path: "path/to/VoucherBannerView.swift"
+        description: "Voucher banner component"
+    files_to_modify: []
+    implementation_notes: "Follow Figma layout: [icon 24x24] --8pt-- [label flex] --8pt-- [CTA button]"
+    reference_file: "path/to/similar/BannerView.swift"
+    testing_notes: "Snapshot tests for both states"
+    design_tokens:                    # Figma-driven tokens for UI tasks
+      colors:
+        - token: "Bento.Color.proGreen"
+          usage: "Success banner background"
+      spacing:
+        - token: "Bento.Spacing.md"
+          usage: "Horizontal padding"
+      typography:
+        - token: "Bento.Typography.bodyBold"
+          usage: "Banner title"
 
   # ... more tasks
 ```
@@ -119,3 +154,5 @@ Read `ui_scope` from `feature_input.yaml`:
 8. **Acceptance criteria are concrete** — "builds without errors", not "works correctly"
 9. **Each task traces to a plan phase** — include the `phase` field
 10. **No task should be ambiguous** — if you can't define it clearly, flag it for the planner
+11. **UI tasks MUST include design_tokens** when figma_context is available — list the exact Bento token names for colors, spacing, typography, and corner radius. Never leave UI tasks without token references when Figma data exists.
+12. **Include ASCII layout in implementation_notes** for UI tasks — copy from figma_context or create from Figma analysis. This gives implementers exact layout specifications.

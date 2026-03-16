@@ -30,11 +30,12 @@ Read `feature_input.yaml` to get:
    - Produce a structured summary (3-5 bullet points)
    - Run the UI Scope Check
    - Identify gaps and ambiguities
-3. **Generate clarifying questions** using the clarifying question rules skill:
-   - Cover all 6 mandatory question groups
+3. **Detect Figma references** — scan the RFC for Figma URLs, Figma file names, or mentions of "Figma", "design", "mockup", "prototype". Record all found references.
+4. **Generate clarifying questions** using the clarifying question rules skill:
+   - Cover all 7 mandatory question groups (including Group 7: Design & Figma)
    - Number every question
    - Focus on gaps identified in step 2
-4. **Write `clarifications.md`** to the feature directory
+5. **Write `clarifications.md`** to the feature directory
 
 ## Output: clarifications.md
 
@@ -80,6 +81,13 @@ Write the file to the same directory as `feature_input.yaml` with this structure
 1. [Question]
 ...
 
+### Group 7 — Design & Figma
+[MANDATORY if RFC mentions Figma, design files, mockups, or UI changes]
+1. [Ask for the Figma URL(s) if not already provided in feature_input.yaml]
+2. [Ask about before/after design states — what screens changed, what's new]
+3. [Ask which Figma frames/pages map to which feature screens]
+[If RFC does NOT mention any design references, write: "No Figma references detected in RFC — skipping design questions."]
+
 ## User Answers
 [Left empty — orchestrator fills this after checkpoint]
 
@@ -98,3 +106,5 @@ Write the file to the same directory as `feature_input.yaml` with this structure
 4. **Never answer your own questions** — leave User Answers empty
 5. **Every gap identified must have at least one question** addressing it
 6. **If the RFC mentions no UI**, ask the UI scope question but mark Group 3 as conditional
+7. **Figma is MANDATORY when referenced** — if the RFC mentions Figma, design files, mockups, prototypes, or any UI changes, Group 7 MUST ask for the Figma URL(s). This is not optional. The pipeline cannot produce accurate UI tasks without design context.
+8. **Scan for Figma references broadly** — look for: "Figma", "figma.com", "design file", "mockup", "prototype", "UI spec", "[Mission]", design tool names. Even an indirect reference like "see attached designs" counts.

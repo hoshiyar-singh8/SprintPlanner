@@ -49,15 +49,30 @@ After Wave 1, classify the archetype as one of: `classic_viper_feature`, `graphq
 - Local test base class or mock generation doc
 - Exact UI or navigation API used by neighbouring files
 
-### 2. Figma Analysis (if URLs provided)
+### 2. Figma Analysis (MANDATORY when URLs present)
+
+**This step is NOT optional.** If `feature_input.yaml` contains `figma_urls`, you MUST complete this step. Skipping Figma analysis when URLs are present is a pipeline failure.
 
 For each Figma URL in `feature_input.yaml`:
-1. Parse URL to extract fileKey and nodeId
-2. Call `get_design_context(nodeId, fileKey)`
-3. For before/after pairs, produce design change summary
-4. Extract token information
+1. **Parse URL** to extract `fileKey` and `nodeId` using the URL parsing rules from `figma-analysis` skill
+2. **Call `get_metadata(nodeId, fileKey)` first** to inspect the layer tree and identify key frames/components
+3. **Call `get_design_context(nodeId, fileKey)`** for each relevant frame/component to get:
+   - Screenshot of the design
+   - Reference code (React+Tailwind — treat as SPECIFICATION only)
+   - Token metadata (colors, spacing, typography, corner radius)
+4. **Produce design change summary** — for before/after pairs, create a diff table (see `figma-analysis` skill)
+5. **Extract and map design tokens** to platform design system:
+   - iOS: Map to Bento tokens using `bento-token-mapping` skill
+   - Colors: Resolve hex → Bento color token name
+   - Spacing: Resolve px → Bento spacing constant
+   - Typography: Resolve font → Bento typography style
+6. **Produce ASCII layout diagrams** for each new/modified component
 
 **iOS Platform**: Check if `/ios-ui-spec` blocks exist in clarifications. If so, use those instead of calling Figma MCP directly.
+
+**If Figma MCP call fails**: Retry once. If still failing, log the error in context_pack.yaml under `figma_context.errors` and continue — but never silently skip.
+
+**If no figma_urls in feature_input.yaml**: Check clarifications.md for any Figma references the user may have shared in answers. If none found, write `figma_context: not_provided` in context_pack.yaml.
 
 ### 3. Build context_pack.yaml
 
@@ -101,20 +116,42 @@ data_flow:                          # optional — present for graphql_feed_feat
   mapper: "[path to GraphQL mapper]"
   render_builder: "[path to sections/data source builder]"
 
-figma_context:                      # only if Figma URLs provided
+figma_context:                      # MANDATORY when figma_urls present, "not_provided" otherwise
+  status: analyzed | skipped_by_user | not_provided | error
   screens:
     - name: "[Screen Name]"
-      before_url: "[URL]"
-      after_url: "[URL]"
+      figma_url: "[full Figma URL]"
+      fileKey: "[extracted fileKey]"
+      nodeId: "[extracted nodeId]"
+      screenshot_analyzed: true | false
+      before_url: "[URL]"           # optional — for before/after diffs
+      after_url: "[URL]"            # optional — for before/after diffs
       changes_summary: "[1-line summary]"
       new_components:
-        - "[component name]"
+        - name: "[component name]"
+          description: "[what it does]"
+          ascii_layout: |           # ASCII art of component layout
+            [UIImageView 24×24] ──8pt── [UILabel flex]
       modified_components:
-        - "[component name]"
-      design_tokens:                # extracted from Figma
-        colors: [...]
-        spacing: [...]
-        typography: [...]
+        - name: "[component name]"
+          change: "[what changed]"
+      design_tokens:                # extracted from Figma and mapped to platform tokens
+        colors:
+          - figma: "[hex or variable name]"
+            platform_token: "[Bento/platform token name]"
+            verified: true | false
+        spacing:
+          - figma: "[px value]"
+            platform_token: "[Bento spacing constant]"
+            verified: true | false
+        typography:
+          - figma: "[font spec]"
+            platform_token: "[Bento typography style]"
+            verified: true | false
+        corner_radius:
+          - figma: "[px value]"
+            platform_token: "[Bento radius constant]"
+  errors: []                        # any Figma MCP errors logged here
 
 dependencies:
   - type: backend | design | library | team
@@ -136,3 +173,5 @@ conventions:
 4. **Include file paths that actually exist** — verify before writing
 5. **Identify the closest similar feature** — this is critical for the planning agent
 6. **Mark Figma tokens as verified or unverified** based on whether /ios-ui-spec was used
+7. **NEVER silently skip Figma analysis** — if figma_urls exist in feature_input.yaml, you MUST call get_design_context. If the call fails, log the error. If no URLs exist, write `figma_context.status: not_provided`. There is no scenario where figma_context is simply absent from the output.
+8. **Always produce ASCII layout diagrams** for new UI components extracted from Figma — this gives downstream agents concrete layout specifications

@@ -25,10 +25,16 @@ Read ALL three files before writing the plan.
 ## Workflow
 
 1. **Read all inputs** — understand the full picture
-2. **Synthesize** — weave together RFC requirements, user decisions, and codebase patterns
-3. **Design the approach** — make architecture decisions based on existing patterns
-4. **Estimate scope** — use story point sizing to estimate each phase
-5. **Write `high_level_plan.md`** to the feature directory
+2. **Check figma_context** — if `context_pack.yaml` has `figma_context.status: analyzed`, incorporate design findings:
+   - Reference specific Figma components and their mapped Bento tokens
+   - Use ASCII layout diagrams from figma_context in Technical Design Notes
+   - Identify new UI components that need implementation (from `new_components`)
+   - Note any modified components (from `modified_components`)
+   - If `figma_context.status` is `not_provided` or `error`, note this as a risk
+3. **Synthesize** — weave together RFC requirements, user decisions, codebase patterns, AND design context
+4. **Design the approach** — make architecture decisions based on existing patterns and Figma design structure
+5. **Estimate scope** — use story point sizing to estimate each phase (UI phases should account for Figma-identified components)
+6. **Write `high_level_plan.md`** to the feature directory
 
 ## Output: high_level_plan.md
 
@@ -83,6 +89,14 @@ Read ALL three files before writing the plan.
 - [State management approach]
 - [Navigation/routing approach]
 
+## Design Context (from Figma)
+[If figma_context was analyzed, include:]
+- **New components**: [List with Bento token mappings]
+- **Modified components**: [List with change descriptions]
+- **Token mappings**: [Key color/spacing/typography → Bento token]
+- **Layout specifications**: [ASCII diagrams from figma_context]
+[If figma_context was not provided, note: "No Figma designs analyzed — UI tasks may need refinement once designs are available."]
+
 ## Risks & Mitigations
 - **Risk 1**: [Description] → Mitigation: [Action]
 - **Risk 2**: [Description] → Mitigation: [Action]
@@ -103,3 +117,5 @@ Read ALL three files before writing the plan.
 8. **If context_pack shows multiple patterns**, choose one and explain why
 9. **The plan is a PLAN, not task specs** — keep it at the right altitude (phases, not individual tasks)
 10. **Include UI only if feature_input.yaml has UI in scope**
+11. **Use Figma context when available** — if figma_context has design tokens and component lists, reference them in architecture decisions and UI phases. Never plan UI work that contradicts what Figma shows.
+12. **Flag missing Figma as a risk** — if the feature has UI scope but figma_context is `not_provided` or `error`, add a risk: "UI tasks may need revision once Figma designs are analyzed"
