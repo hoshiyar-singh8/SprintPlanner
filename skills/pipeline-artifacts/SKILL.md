@@ -62,6 +62,20 @@ labels:                                     # optional
 ```markdown
 # Clarifications — [Feature Name]
 
+## RFC Summary
+- [Key requirement 1]
+- [Key requirement 2]
+
+## Requirements
+| ID | Requirement | RFC Section | UI? |
+|----|-------------|-------------|-----|
+| R1 | [requirement] | [section ref] | Yes/No |
+| R2 | [requirement] | [section ref] | Yes/No |
+
+## Identified Gaps
+- [Gap 1]
+- [Gap 2]
+
 ## Questions
 
 ### Group 1 — Feature Scope & Business Rules

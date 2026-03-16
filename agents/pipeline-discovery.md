@@ -28,6 +28,7 @@ Read `feature_input.yaml` to get:
 1. **Read the RFC document** at `rfc_path`
 2. **Extract requirements** using the RFC reading skill:
    - Produce a structured summary (3-5 bullet points)
+   - Extract an **explicit numbered requirements list** (R1, R2, ...) — each requirement maps to one RFC section
    - Run the UI Scope Check
    - Identify gaps and ambiguities
 3. **Detect Figma references** — scan the RFC for Figma URLs, Figma file names, or mentions of "Figma", "design", "mockup", "prototype". Record all found references.
@@ -48,6 +49,12 @@ Write the file to the same directory as `feature_input.yaml` with this structure
 - [Bullet 1]
 - [Bullet 2]
 - [3-5 key requirements]
+
+## Requirements
+| ID | Requirement | RFC Section | UI? |
+|----|-------------|-------------|-----|
+| R1 | [requirement] | [section ref] | Yes/No |
+| R2 | [requirement] | [section ref] | Yes/No |
 
 ## Identified Gaps
 - [Gap 1: description and why it matters]

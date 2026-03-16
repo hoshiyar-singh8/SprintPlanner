@@ -94,6 +94,11 @@ def validate(file_path):
         if isinstance(ac, list) and len(ac) < 1:
             warnings.append(f"{task_id}: acceptance_criteria is empty")
 
+        # Requirement traceability (optional but recommended)
+        req_ids = task.get("requirement_ids", [])
+        if not req_ids:
+            warnings.append(f"{task_id}: no requirement_ids — cannot trace to RFC")
+
         # Dependencies
         depends_on = task.get("depends_on", [])
         if depends_on is None:

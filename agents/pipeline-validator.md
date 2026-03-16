@@ -55,7 +55,7 @@ Read ALL files before validating.
 - [ ] Reference files mentioned in tasks exist in context_pack key_files
 
 ### Cross-File Checks
-- [ ] Every RFC requirement (from clarifications.md RFC Summary) traces to at least one task
+- [ ] Every RFC requirement from the Requirements table (R1, R2, ...) traces to at least one task
 - [ ] Every task traces back to a plan phase
 - [ ] Dependency references point to existing task IDs (no dangling refs)
 - [ ] Dependencies form a valid DAG (no cycles)

@@ -25,6 +25,22 @@ Read ALL three files before writing the plan.
 ## Workflow
 
 1. **Read all inputs** — understand the full picture
+1b. **If multiple architecture approaches are viable**, present a fit-check table:
+
+```markdown
+## Approach Comparison
+
+| Requirement | Approach A (extend existing) | Approach B (new module) |
+|-------------|:---:|:---:|
+| R1: Config flag | pass | pass |
+| R2: API integration | pass | pass |
+| R3: UI component | pass | fail (no existing pattern) |
+
+**Selected**: Approach A — rationale: [why]
+```
+
+This helps the user understand trade-offs at Checkpoint 2.
+
 2. **Check figma_context** — if `context_pack.yaml` has `figma_context.status: analyzed`, incorporate design findings:
    - Reference specific Figma components and their mapped Bento tokens
    - Use ASCII layout diagrams from figma_context in Technical Design Notes

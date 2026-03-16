@@ -49,6 +49,7 @@ tasks:
     layer: config
     sp: 1
     phase: 1
+    requirement_ids: [R1]          # traces back to Requirements table in clarifications.md
     depends_on: []
     acceptance_criteria:
       - "Config flag defined in Configuration.swift"

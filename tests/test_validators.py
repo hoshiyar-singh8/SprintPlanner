@@ -233,6 +233,7 @@ tasks:
     layer: config
     sp: 1
     depends_on: []
+    requirement_ids: [R1]
     acceptance_criteria:
       - Flag defined
       - Default is false
@@ -241,6 +242,7 @@ tasks:
     layer: api
     sp: 1
     depends_on: [TASK-001]
+    requirement_ids: [R2]
     acceptance_criteria:
       - Codable struct created
 """)
