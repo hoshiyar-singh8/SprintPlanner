@@ -8,9 +8,17 @@ import yaml
 
 
 VALID_LAYERS = {
-    "ui", "viewmodel", "api", "mapper", "presenter", "interactor",
-    "router", "config", "test", "integration", "navigation",
-    "domain", "model", "builder", "di",
+    # Shared
+    "api", "config", "di", "domain", "mapper", "model", "navigation",
+    "test", "integration", "ui", "viewmodel",
+    # iOS / VIPER
+    "builder", "interactor", "presenter", "router", "view",
+    # Android / MVVM
+    "data", "repository", "usecase", "fragment", "composable",
+    # Web
+    "component", "hook", "service", "store", "page",
+    # Backend
+    "handler", "controller", "middleware", "schema",
 }
 
 MAX_SP = 3
