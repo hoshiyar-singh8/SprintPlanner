@@ -107,23 +107,42 @@ Ask: "Do you have Figma designs for this feature? (Figma URL, or 'no' / 'not yet
 - If no → record `figma_urls: []`, note "no designs provided"
 - If "not yet" → record `figma_status: pending`, warn that UI tasks will be approximate
 
-**Step 0f — Output Directory**
+**Step 0f — Jira Setup (Auto-Config)**
+
+Ask: "Do you want to connect to Jira? Options:
+1. **Yes — give me the project URL** (e.g., `https://your-org.atlassian.net/projects/PROJ`) and I'll auto-detect components, fields, and priorities
+2. **Epic link** — also give me the epic URL/key if you have one (e.g., `PROJ-100` or the Jira URL)
+3. **Skip** — I'll use placeholder values and you can edit `jira_config.yaml` later"
+
+If user provides a Jira URL/key:
+- Check for Jira credentials: env vars `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`
+- If credentials not set, ask user to provide email + API token (guide them to https://id.atlassian.net/manage-profile/security/api-tokens to create one)
+- Run: `python3 ~/.claude/hooks/jira_auto_config.py --url <url> --project <key> --epic <epic_key> --email <email> --token <token> --output <feature_dir>/jira_config.yaml`
+- This auto-discovers: project key, component IDs by platform, story points field, sprint field, repository field, priorities, and sets the current user as default assignee
+- Show the user what was found: "Found project **PROJ** with components: iOS (18967), Android (18965). Story points field: customfield_10053. Assignee: Your Name."
+- Store `jira_config_status: auto` in feature_input.yaml
+
+If user skips:
+- Store `jira_config_status: manual`
+- Pipeline will use placeholder defaults from `jira_config.template.yaml`
+
+**Step 0g — Output Directory**
 
 Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/` in your current directory)"
 - User can accept default (cwd-based) or provide a custom path
 - **Never write artifacts inside a dependency checkout or vendored directory** — if repo_path looks like `Carthage/Checkouts/`, `node_modules/`, `vendor/`, `Pods/`, default to cwd instead
 - Store the chosen path as `output_dir` in feature_input.yaml
 
-**Step 0g — Remaining Config**
+**Step 0h — Remaining Config**
 
 Collect:
 - Feature name (derive from RFC title if not provided)
 - UI scope level: 1-4 (default: 1)
 - Max SP per task: 1-3 (default: 3)
-- Epic key (optional)
+- Epic key (if not already collected in Step 0f)
 - Labels (optional)
 
-**Step 0h — Write Artifacts**
+**Step 0i — Write Artifacts**
 
 1. Create directory: `<output_dir>` (resolved from step 0f)
 2. Write `feature_input.yaml`

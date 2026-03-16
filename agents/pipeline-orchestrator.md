@@ -123,23 +123,43 @@ Ask: "Do you have Figma designs? (Figma URL, 'no', or 'not yet')"
 - "no" → `figma_urls: []`
 - "not yet" → `figma_status: pending`, note UI tasks will be approximate
 
-**Step 0f — Output Directory**
+**Step 0f — Jira Setup (Auto-Config)**
+
+Ask:
+> "Do you want to connect to Jira? Options:
+> 1. **Yes** — give me the Jira project URL (e.g., `https://your-org.atlassian.net/projects/PROJ`)
+> 2. **Epic link too** — also provide the epic URL or key (e.g., `PROJ-100`)
+> 3. **Skip** — use placeholders, edit `jira_config.yaml` later"
+
+If user provides a Jira URL/key:
+1. Parse the URL to extract `base_url` and `project_key`
+2. Check for credentials: `JIRA_EMAIL` and `JIRA_API_TOKEN` env vars
+3. If not set → ask user for email + API token, guide them: "Create an API token at https://id.atlassian.net/manage-profile/security/api-tokens"
+4. Run: `python3 ~/.claude/hooks/jira_auto_config.py --url <url> --project <key> --epic <epic> --email <email> --token <token> --output <feature_dir>/jira_config.yaml`
+5. Show discovered config to user for confirmation
+6. Store `jira_config_status: auto` in feature_input.yaml
+
+If user skips:
+- Store `jira_config_status: manual`
+- Placeholder defaults will be used
+
+**Step 0g — Output Directory**
 
 Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/` in your current directory)"
 - User can accept default (cwd-based) or provide a custom path
 - **Guard against dependency directories**: if `repo_path` contains `Carthage/Checkouts/`, `node_modules/`, `vendor/`, `Pods/`, `.build/`, default to cwd instead of repo_path
 - Store the resolved absolute path as `output_dir` in feature_input.yaml
 
-**Step 0g — Remaining Config**
+**Step 0h — Remaining Config**
 
 Collect (with sensible defaults):
 - Feature name (derive from RFC if not provided)
 - UI scope: 1-4 (default: 1)
 - Max SP per task: 1-3 (default: 3)
-- Epic key (optional)
+- Epic key (if not already collected in Step 0f)
 - Labels (optional)
 
-**Step 0h — Write Artifacts**
+**Step 0i — Write Artifacts**
 
 1. Create directory at `output_dir`
 2. Write `feature_input.yaml` with ALL collected data

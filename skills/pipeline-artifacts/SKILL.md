@@ -47,6 +47,7 @@ figma_urls:                                 # optional
     screen: "Manage Subscription"
     type: after
 figma_status: provided                      # provided | not_provided | pending
+jira_config_status: auto                   # auto | manual (auto = fetched from Jira API)
 sp_max: 3                                  # max story points per task (1-3)
 ui_scope: 1                                # UI scoping ladder level (1-4)
 output_dir: "/path/to/.ai/features/feature-name"  # resolved absolute path for artifacts

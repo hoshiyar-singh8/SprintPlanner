@@ -72,7 +72,8 @@ The pipeline will ask you step by step:
 3. **Checks for matching skills** — if missing, offers to explore your repo and generate them
 4. **"What's the RFC/PRD?"** — file path, URL, or paste content
 5. **"Do you have Figma designs?"** — Figma URLs or skip
-6. Then runs the 8-stage pipeline with checkpoints
+6. **"Connect to Jira?"** — give a project URL and it auto-discovers components, fields, and priorities via the Jira API
+7. Then runs the 8-stage pipeline with checkpoints
 
 ### Example
 
@@ -96,6 +97,12 @@ The pipeline will ask you step by step:
 >
 > "Do you have Figma designs?"
 > → `https://figma.com/design/abc123/...`
+>
+> "Connect to Jira? Give me the project URL and I'll auto-detect everything."
+> → `https://myorg.atlassian.net/projects/ANDROID`
+> → Epic: `ANDROID-500`
+>
+> *[auto-discovers components, fields, priorities, sets you as assignee]*
 
 ### Resume
 
@@ -148,7 +155,7 @@ Generated skills are saved to `~/.claude/skills/` and reused across future pipel
 | `pipeline-jira-writer` | Sonnet | Writes Jira ticket descriptions |
 | `pipeline-validator` | Sonnet | Cross-checks all artifacts |
 
-### Hooks (10)
+### Hooks (11)
 
 | Hook | Trigger |
 |------|---------|
@@ -161,17 +168,27 @@ Generated skills are saved to `~/.claude/skills/` and reused across future pipel
 | `validate_task_specs.py` | After Stage 4 |
 | `validate_classification.py` | After Stage 5 |
 | `render_jira_payload.py` | After Stage 6 (generates Jira API JSON) |
+| `jira_auto_config.py` | Stage 0 (auto-discovers Jira project config via API) |
 | `quality_gate.py` | After Stage 7 (final cross-file checks) |
 
 ## Customization
 
 ### Jira Configuration
 
-Edit `hooks/render_jira_payload.py` to update:
-- Project key (default: `LOY`)
-- Custom field IDs
-- Component IDs
-- Default assignee
+The pipeline can **auto-configure Jira** during Stage 0 intake. Give it your Jira project URL and it discovers everything via the API:
+- Project key, components (mapped by platform), custom fields (story points, sprint, repo)
+- Priorities, and sets you as the default assignee
+
+Requires a Jira API token — create one at https://id.atlassian.net/manage-profile/security/api-tokens
+
+You can also set env vars for convenience:
+```bash
+export JIRA_BASE_URL="https://your-org.atlassian.net"
+export JIRA_EMAIL="you@example.com"
+export JIRA_API_TOKEN="your-token-here"
+```
+
+Or manually edit `~/.claude/jira_config.yaml` (installed from `jira_config.template.yaml`).
 
 ### Architecture Rules
 
