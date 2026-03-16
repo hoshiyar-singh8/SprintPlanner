@@ -7,6 +7,25 @@ description: Agent-safe vs human-only classification rules
 # Hero Gen Task Safety Classification
 
 Background knowledge for agents that classify tasks as Hero Gen (bot-safe) or Human-only.
+Based on analysis of real HeroGen PRs — what gets MERGED vs CLOSED.
+
+## Evidence From Real PRs
+
+### What HeroGen Succeeds At (Merged PRs)
+- **Single API endpoint additions** — adding a query param, new GET/POST route (iOS #35660, Android #43745)
+- **Single UI component with all states** — one View + ViewModel, both states in same PR (iOS #35708, #35778)
+- **Config flags** — S3 feature flag with version gating (Android #43620)
+- **Single mapper** — one-direction data transformation (iOS #35820)
+- **Cleanup/deletion** — removing dead code behind removed flag (iOS #35685)
+- **Module creation** — new module with clear public API and no integration wiring (Android #43636)
+
+### What HeroGen Fails At (Closed/Rejected PRs)
+- **Over-split UI states** — 3 separate tickets for one component's empty/loading/error states (combine them)
+- **Cross-layer tasks** — model + mapper + view in one ticket (split by layer instead)
+- **Integration wiring** — connecting a new component to an existing parent VC/Fragment
+- **Tasks requiring runtime context** — understanding navigation flow, lifecycle, DI graph
+- **Vague acceptance criteria** — "works correctly" instead of "returns nil when input is empty"
+- **Many-file modifications** — touching 5+ existing files with interrelated changes
 
 ## Classification Decision Tree
 
@@ -14,7 +33,7 @@ Background knowledge for agents that classify tasks as Hero Gen (bot-safe) or Hu
 Is the task single-layer? ──NO──→ HUMAN
   │ YES
   ▼
-Is the task well-defined with clear inputs/outputs? ──NO──→ HUMAN
+Is it well-defined with clear inputs/outputs? ──NO──→ HUMAN
   │ YES
   ▼
 Does it follow an existing codebase pattern? ──NO──→ HUMAN
@@ -26,60 +45,94 @@ Does it require architectural judgment? ──YES──→ HUMAN
 Is it ≤2 SP? ──NO──→ HUMAN (or split first)
   │ YES
   ▼
+Does it modify >3 existing files? ──YES──→ HUMAN
+  │ NO
+  ▼
 → HERO GEN CANDIDATE
 ```
 
 ## Hero Gen Safe Categories
 
-These task types are safe for Hero Gen (bot execution):
+### iOS (VIPER)
 
 | Category | Why Safe | Requirements |
 |----------|----------|-------------|
-| **UI Components** (View layer ONLY) | Mechanical, pattern-following | ASCII layout, Bento tokens, code blocks |
-| **Config Flags** | S3 config, feature flag setup | Flag name, config key, default value |
-| **API Models** | Codable structs, DTOs | Exact field names and types |
+| **UI Components** (View layer ONLY) | Mechanical, pattern-following | Layout spec, Bento tokens, reference file, all states in one task |
+| **Config Flags** | S3 config + version gating | Flag name, config key, default value, version gate |
+| **API Models** | Codable structs, DTOs | Exact field names, types, CodingKeys |
 | **Domain Models** | Enums, structs, value objects | Clear field definitions |
 | **Mappers** (single direction) | Pure data transformation | Input/output types, mapping rules |
-| **Deep Link Params** | URL parsing additions | Parameter name, type, extraction rules |
-| **Navigation Routes** | Router method additions | Source, destination, data passing |
-| **Presenter Properties** | Simple computed properties | Data source, transformation logic |
+| **API Endpoint Changes** | URL/param additions | Exact param name, type, URL construction rules |
+| **Cleanup/Deletion** | Removing dead code | List of files/code to remove, what flag gated it |
+
+### Android (MVVM)
+
+| Category | Why Safe | Requirements |
+|----------|----------|-------------|
+| **Composable UI** (View layer ONLY) | Declarative, pattern-following | Layout spec, design tokens, reference composable, all states |
+| **Config Flags** (VariationKey/S3) | Feature flag setup | Key name, default, variation mapping |
+| **Data Models** | data class / sealed class | Exact field names, types, serialization |
+| **Mappers** (single direction) | Pure transformation | Input/output types, mapping rules |
+| **Repository additions** | New data source method | Endpoint, return type, error handling pattern |
+| **UseCase creation** | Single-purpose business logic | Input, output, repository dependency |
+| **Shadow/comparison modules** | A/B testing infra | Old/new source, comparison logic |
 
 ## Human-Only Categories
 
-These task types MUST be assigned to human developers:
+| Category | Why Human | Applies To |
+|----------|-----------|-----------|
+| **Cross-Layer Wiring** | View + Presenter + Router coordination | Both |
+| **Integration/DI Setup** | Builder/container/Dagger updates, module assembly | Both |
+| **Payment Flow Changes** | Critical path, high risk | Both |
+| **Complex Business Logic** | State machines, multi-step flows | Both |
+| **Error Handling Strategy** | Design decisions, fallback design | Both |
+| **Fragment/VC Lifecycle** | Lifecycle-aware coordination | Both |
+| **Navigation Graph Changes** | Route registration, deep link wiring | Both |
+| **3 SP Tasks** | Too complex for bot | Both |
+| **Tasks modifying 4+ existing files** | Too many integration points | Both |
 
-| Category | Why Human | Characteristics |
-|----------|-----------|----------------|
-| **Complex Business Logic** | Judgment required | State machines, multi-step flows, conditional orchestration |
-| **Cross-Layer Wiring** | Can't cleanly split | View + Presenter + Router coordination |
-| **Integration/DI Setup** | Architectural decisions | Builder/container updates, module assembly |
-| **Payment Flow Changes** | Critical path, high risk | Payment logic, flow bifurcation |
-| **Error Handling Strategy** | Design decisions | Error mapping, retry logic, fallback design |
-| **Unit Tests** (complex) | Thoughtful test case design | Edge case identification, mock strategy |
-| **Architecture Decisions** | Senior judgment | New patterns, protocol design, module boundaries |
-| **3 SP Tasks** | Too complex for bot | Multiple files, architectural understanding |
-
-### Exception: Simple Tests → Hero Gen
+### Exceptions: Simple Tests → Hero Gen
 - Model/mapper tests with obvious input/output → Hero Gen OK
 - Tests following existing test file pattern exactly → Hero Gen OK
+- Snapshot/preview tests for UI components → Hero Gen OK (if reference pattern exists)
+
+## Granularity Check (Prevent Over-Splitting)
+
+Before classifying, check for these anti-patterns that should be COMBINED:
+
+| Anti-Pattern | Fix |
+|-------------|-----|
+| 3 separate tickets for one component's states (empty/loading/error) | Combine into 1 UI task with all states |
+| Separate tickets for ViewModel + View of same component | Combine into 1 task |
+| Separate ticket for "add protocol" + "implement protocol" | Combine into 1 task |
+| Model creation + its mapper as separate tasks | Keep separate (different layers) — this IS correct |
+
+Rule: If removing one ticket makes the other meaningless, they should be one ticket.
 
 ## Hero Gen Task Requirements
 
 For a task to be Hero Gen safe, it MUST include:
 
 1. **Exact file paths** to create/modify (no "find the right file")
-2. **Code blocks** showing the expected implementation structure
-3. **Reference implementation** with deviation table
+2. **Reference implementation** — "follow pattern in `ExistingFile.swift`"
+3. **Deviation table** — what differs from reference
 4. **Anti-patterns** list (what NOT to do)
-5. **Acceptance criteria** that are machine-verifiable
-6. **No ambiguous instructions** ("use your judgment", "decide the best approach")
+5. **Acceptance criteria** that are machine-verifiable (not "works correctly")
+6. **Scope boundary** — what's explicitly NOT included
 
 ### UI Tasks Must Additionally Include
-- ASCII layout diagram with exact spacing
-- Bento token mapping for all colors/fonts/spacing
-- `setup()` code block with UIStackView configuration
-- `update(with:)` method body with numbered steps
-- "Out of Scope" section listing excluded work
+- Layout spec (ASCII diagram or structured description)
+- Design token mapping for ALL visual properties (colors, fonts, spacing, radius)
+- ViewModel definition (enum/struct with all states)
+- View structure (class signature, key methods)
+- All states handled in one task (not split across tickets)
+- "Out of Scope" section listing excluded work (tap handling, parent wiring, etc.)
+
+### Android-Specific Requirements
+- Composable function signature with all parameters
+- Preview function for each state
+- Theme token references (not raw hex/dp values)
+- Hilt/Anvil module binding if new injectable class
 
 ## Classification Output Format
 

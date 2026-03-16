@@ -7,6 +7,27 @@ description: Ticket format, Hero Gen requirements, Jira API payload structure
 # Jira Ticket Standard
 
 Background knowledge for agents that produce Jira ticket content.
+Based on analysis of real HeroGen PRs — what gets MERGED vs CLOSED.
+
+## What Makes a HeroGen Ticket Succeed
+
+From studying merged HeroGen PRs across iOS and Android:
+
+1. **Single responsibility** — one clear deliverable per ticket (not "add model + mapper + view")
+2. **Explicit file change table** — every file listed with what changes
+3. **Concrete test plan** — checkbox items with exact conditions, not "test it works"
+4. **Scope boundary** — explicitly says what's NOT included (critical for scope-1 UI)
+5. **Design tokens by name** — `.proDealHighlight1`, `.cornerRadiusContainerEdge`, never hex
+6. **Figma node references** — `Figma node 698-45462` for UI tasks
+7. **Reference file** — "follow pattern in `ExistingView.swift`" with deviation table
+8. **Unit tests in same PR** — test requirements must be concrete enough for HeroGen to write them
+
+What causes HeroGen to FAIL:
+- Tickets that cross layers (model + mapper + view in one ticket)
+- Tickets that require understanding integration context the bot doesn't have
+- Overly split tickets (3 separate tickets for one component's states — combine them)
+- Vague acceptance criteria ("works correctly" instead of "returns nil when input is empty")
+- Missing mock/test infrastructure context
 
 ## Jira Configuration
 
@@ -41,76 +62,227 @@ Always **Task** (never Story, Bug, Epic, Sub-task).
 
 ```markdown
 ## [TICKET-ID] Title
-- **Title**: Clear, action-oriented (e.g., "Add is_partnership_voucher_enabled config key")
 - **Component**: iOS | Android | Backend | Web
-- **Assignee**: [Name or TBD]
-- **Story Points**: [1 | 2 | 3 — max 3, prefer 1]
-- **Description**:
-  - What needs to be done (specific, unambiguous)
-  - Acceptance criteria (bullet points)
-  - Technical notes (relevant code paths, patterns to follow)
-- **Dependencies**: [List any blocking tickets]
-- **Definition of Done**:
-  - [ ] Code implemented
-  - [ ] Unit tests passing
-  - [ ] Code review approved
+- **Story Points**: [1 | 2 | 3]
+
+### Context
+[Why this task exists — 1-2 sentences linking to the feature goal]
+
+### Requirements
+1. [Specific requirement with file path]
+2. [Another requirement]
+
+### Acceptance Criteria
+- [ ] [Testable criterion]
+- [ ] [Another testable criterion]
+- [ ] Unit tests passing
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `path/to/file.swift` | Add X method |
+| `path/to/other.swift` | Update Y protocol |
+
+### Technical Notes
+- Follow pattern in `path/to/reference.swift`
+- [Key architectural decision or constraint]
+
+### Dependencies
+- [TICKET-ID]: [What it provides]
 ```
 
-## Hero Gen (Bot) Ticket Format
+## Hero Gen Ticket Format
 
-Hero Gen tasks must be significantly more detailed since a bot executes them:
+HeroGen tickets must be self-contained — the bot reads ONLY the ticket description.
+Every piece of information the bot needs must be in the ticket.
+
+### API / Data Layer Tasks
 
 ```markdown
-## [TICKET-ID] Title
-- **Title**: Precise, unambiguous title
-- **Component**: iOS | Android | Web
+## [TICKET-ID] Add voucher_code query param to partnership endpoint
+
+- **Component**: iOS
 - **Type**: Hero Gen Task
-- **Story Points**: [1 | 2 — max 2 for Hero Gen, prefer 1]
+- **Story Points**: 1
 
-- **Layout Spec** (UI tasks only):
-  ```
-  [ASCII art layout diagram]
-  ```
-  - Padding: top/bottom Xpt, left/right Xpt
-  - Element gap: Xpt
-  - Corner radius: Xpt (specify which corners)
-  - Icon: {icon-name} Xpt x Xpt
+### Context
+The partnership enrollment flow needs to forward an optional voucher code
+to the backend API when fetching partnership details.
 
-- **Design Tokens** (UI tasks only):
-  - Background: .tokenName
-  - Label font: .tokenName
-  - Label color: .tokenName
+### Files to Modify
+| File | Change |
+|------|--------|
+| `SubscriptionResource.swift` | Add `voucherCode: String?` param to `fetchPartnershipDetails` |
+| `PartnershipsClient.swift` | Update protocol + impl to accept and forward `voucherCode` |
+| `PartnershipsRepository.swift` | Pass through `voucherCode` |
 
-- **Out of Scope** (UI tasks — explicit exclusion list):
-  - e.g., Tap action handling
-  - e.g., Wiring into parent ViewController
-  - e.g., Presenter / Interactor changes
+### Exact Requirements
+1. Add `voucherCode: String?` parameter (default `nil`) to `fetchPartnershipDetails`
+2. When non-nil, append `?voucher_code=<code>` to the URL
+3. When nil, omit the query parameter entirely (preserve existing behavior)
+4. Update all call sites to pass `voucherCode: nil` for backward compatibility
 
-- **Files to Create**:
-  - `path/to/ViewModel.swift`
-  - `path/to/View.swift`
+### Acceptance Criteria
+- [ ] `fetchPartnershipDetails(planCode: "klarna", voucherCode: "FREE-123")` → URL contains `?voucher_code=FREE-123`
+- [ ] `fetchPartnershipDetails(planCode: "klarna", voucherCode: nil)` → URL has no query param
+- [ ] All existing tests pass without modification
+- [ ] New unit tests cover both cases
 
-- **Detailed Description**:
-  - **Context**: Why this task exists (1-2 sentences)
-  - **Exact Requirements**: Step-by-step with file paths, code patterns, naming conventions
-  - **Input/Output Specification**: What the code accepts and returns
-  - **Edge Cases to Handle**: Explicit list
-  - **Testing Requirements**: Specific test cases, expected behaviors, mock setup
-  - **Acceptance Criteria**: Numbered, each testable
-  - **Anti-patterns to Avoid**: Implementation-specific "do NOT" list
+### Reference Implementation
+Follow `SubscriptionResource.fetchPartnershipDetails` existing pattern.
+| Aspect | Current | New |
+|--------|---------|-----|
+| Parameters | `planCode: String` | `planCode: String, voucherCode: String? = nil` |
+| URL construction | Fixed path only | Conditional `?voucher_code=` query param |
 
-- **Reference Implementation**: File path + deviation table:
-  ```
-  | Aspect | Reference (ExistingView) | New (NewView) |
-  |--------|--------------------------|---------------|
-  | Corner radius | .cornerRadiusSm | .cornerRadiusContainerEdge |
-  | States | Single | Two: .stateA / .stateB |
-  ```
+### Anti-patterns
+- Do NOT use force unwrap on voucherCode
+- Do NOT modify the enrollment POST endpoint — only the GET details endpoint
+- Do NOT add feature flag gating in this task (handled separately)
 
-- **Layout Code Block** (platform-specific starter code)
+### Testing Requirements
+- Test file: `SubscriptionResourceTests.swift` (create if needed)
+- Test 1: Call with voucherCode="FREE-123" → assert URL contains query param
+- Test 2: Call with voucherCode=nil → assert URL has no query param
+```
 
-- **Dependencies**: [Blocking tickets]
-- **Estimated Effort**: X hours (<=4h for 1pt, <=6h for 2pt)
+### UI Component Tasks (Scope 1)
+
+```markdown
+## [TICKET-ID] Create PartnershipVoucherBannerView — Two-State Sticky Banner
+
+- **Component**: iOS
+- **Type**: Hero Gen Task
+- **Story Points**: 2
+
+### Context
+Partnership plans can include a voucher. The banner shows either an "unapplied"
+state (prompting the user to apply) or an "applied" state (confirming discount).
+
+### Scope
+Pure UI (Scope 1) — ViewModel struct + View only. Zero existing files modified.
+
+### Out of Scope
+- Tap action handling / delegate wiring
+- Wiring into parent ViewController
+- Presenter / Interactor changes
+- Navigation logic
+
+### Files to Create
+| File | Path |
+|------|------|
+| `PartnershipVoucherBannerViewModel.swift` | `Subscription/Source/Views/Partnerships/Views/` |
+| `PartnershipVoucherBannerView.swift` | `Subscription/Source/Views/Partnerships/Views/` |
+
+### Layout Spec
+```
+[Icon 24×24] ——8pt—— [Title label (flex)] ——8pt—— [CTA label]
+└──── 16pt padding ────────────────────────────── 16pt padding ─┘
+                    8pt top / 8pt bottom
+Top-left + top-right corners: 16pt radius. Bottom corners: square.
+```
+
+### Design Tokens
+| Element | Unapplied State | Applied State |
+|---------|----------------|---------------|
+| Background | `.proDealHighlight1` | `.feedbackPositiveSurface` |
+| Icon | `icVoucherFilled` | `icSuccessFilled` |
+| Title font | `.bodyBase` | `.bodyBase` |
+| Title color | `.neutralPrimary` | `.neutralPrimary` |
+| CTA font | `.highlightBase` | `.highlightBase` |
+| CTA color | `.interactionSecondary` | `.interactionSecondary` |
+| Corner radius | `.cornerRadiusContainerEdge` (top only) | `.cornerRadiusContainerEdge` (top only) |
+| Stack spacing | `.spacingXs` (8pt) | `.spacingXs` (8pt) |
+| Horizontal padding | `.spacingSm` (16pt) | `.spacingSm` (16pt) |
+
+### Figma References
+- Unapplied: Figma node `698-45462`
+- Applied: Figma node `698-45093`
+
+### ViewModel Definition
+```swift
+enum PartnershipVoucherBannerState {
+    case unapplied
+    case applied
+}
+
+struct PartnershipVoucherBannerViewModel {
+    let state: PartnershipVoucherBannerState
+    let bannerText: String
+    let ctaText: String
+}
+```
+
+### View Structure
+```swift
+final class PartnershipVoucherBannerView: UIView {
+    // Horizontal UIStackView: icon + titleLabel + ctaLabel
+    // update(with: PartnershipVoucherBannerViewModel) switches state appearance
+}
+```
+
+### Reference Implementation
+Follow `EnrolmentVoucherBannerView.swift` pattern.
+| Aspect | Reference (`EnrolmentVoucherBannerView`) | New (`PartnershipVoucherBannerView`) |
+|--------|------------------------------------------|-------------------------------------|
+| States | Single (always visible) | Two: `.unapplied` / `.applied` |
+| Corner radius | `.cornerRadiusSm` (all corners) | `.cornerRadiusContainerEdge` (top only) |
+| Icon rendering | `.alwaysOriginal` | `.alwaysTemplate` (tinted) |
+| CTA | None | Trailing label with interactionSecondary color |
+
+### Acceptance Criteria
+- [ ] `update(with:)` with `.unapplied` → background is `.proDealHighlight1`, icon is `icVoucherFilled`
+- [ ] `update(with:)` with `.applied` → background is `.feedbackPositiveSurface`, icon is `icSuccessFilled`
+- [ ] Top corners rounded at 16pt, bottom corners square (`layer.maskedCorners`)
+- [ ] Stack spacing is 8pt, vertical padding 8pt, horizontal padding 16pt
+- [ ] Title uses `.bodyBase` font and `.neutralPrimary` color
+- [ ] CTA uses `.highlightBase` font and `.interactionSecondary` color
+- [ ] Icon constrained to 24×24pt with `.alwaysTemplate` rendering mode
+- [ ] No existing files modified (diff is only new files)
+
+### Anti-patterns
+- Do NOT use raw hex colors — Bento tokens only
+- Do NOT add delegate/protocol for tap handling (out of scope)
+- Do NOT import UIKit components when Bento equivalents exist
+- Do NOT hardcode strings — use ViewModel properties
+```
+
+### Config Flag Tasks
+
+```markdown
+## [TICKET-ID] Add isPartnershipVoucherEnabled config flag
+
+- **Component**: iOS
+- **Type**: Hero Gen Task
+- **Story Points**: 1
+
+### Context
+Feature flag to gate the partnership voucher flow. Must be false by default.
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `Configuration.swift` | Add `isPartnershipVoucherEnabled: Bool` property |
+| `ConfigurationProvider.swift` | Add S3 key mapping + version gating |
+
+### Exact Requirements
+1. Add `isPartnershipVoucherEnabled` property to Configuration protocol
+2. Default value: `false`
+3. S3 key: `is_partnership_voucher_enabled` (following existing naming pattern)
+4. Apply version gating: only enabled for app version >= [specified version]
+
+### Reference Implementation
+Follow `isPartnershipsPlanEnabled` pattern in the same files.
+
+### Acceptance Criteria
+- [ ] Flag defaults to `false`
+- [ ] Flag reads from S3 config correctly
+- [ ] Version gating applied
+- [ ] Existing tests pass
+
+### Anti-patterns
+- Do NOT use a hardcoded `true` default
+- Do NOT skip version gating
 ```
 
 ## Jira API Payload Structure
@@ -137,10 +309,23 @@ The `render_jira_payload.py` hook generates this from `task_specs.yaml` + `jira_
 
 ## Ticket Title Convention
 - Prefix with platform tag: `[iOS]`, `[Android]`, `[Web]`, `[BE]`, `[Flutter]`
-- Action-oriented: "Add", "Create", "Implement", "Wire", "Update"
+- Action-oriented: "Add", "Create", "Implement", "Wire", "Update", "Clean up"
 - Include the specific component/module name
+- Example: `[iOS] Create PartnershipVoucherBannerView — Two-State Sticky Banner`
 
-## Project Conventions
-- Labels: feature-specific (e.g., `partnership-voucher`) + platform (e.g., `ios`)
-- Epic parent: specified per feature in `feature_input.yaml`
-- Repository: configured in `jira_config.yaml`
+## Task Granularity Rules (from real HeroGen success/failure data)
+
+### DO — Tasks that merge successfully:
+- Single new UIView/Composable with ViewModel (all states in one task)
+- Single API endpoint addition (query param, new route)
+- Single config flag
+- Single mapper (one direction)
+- Module creation with clear public API
+- Cleanup/deletion of old code behind removed flag
+
+### DON'T — Tasks that get closed/rejected:
+- Multiple UI states split across separate tickets (combine into one component ticket)
+- Model + mapper + view in one ticket (split by layer)
+- Tasks requiring understanding of runtime integration flow
+- Tasks that modify many existing files without clear patterns
+- Tasks with vague scope ("implement voucher flow")

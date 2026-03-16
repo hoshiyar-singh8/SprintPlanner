@@ -76,6 +76,15 @@ def validate(file_path):
                 f"(usually requires human judgment)"
             )
 
+        # Check file count for herogen tasks
+        if mode_type == "herogen":
+            modify_count = len(task.get("files_to_modify", []))
+            if modify_count >= 4:
+                warnings.append(
+                    f"{task_id}: herogen task modifies {modify_count} existing files "
+                    f"(tasks modifying 4+ files are usually human-only)"
+                )
+
     # Print results
     for w in warnings:
         print(f"WARN: {w}")
