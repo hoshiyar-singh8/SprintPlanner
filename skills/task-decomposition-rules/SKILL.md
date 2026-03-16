@@ -1,7 +1,7 @@
 ---
 name: task-decomposition-rules
 user-invocable: false
-description: Split B2C iOS work into single-layer tasks across VIPER, GraphQL feed, DI, and UI registration flows.
+description: Split work into single-layer tasks across VIPER/MVVM, API, DI, and UI flows.
 ---
 
 # Task Decomposition Rules
@@ -67,7 +67,7 @@ Always clarify and honor the user's intended scope. Default to SMALLEST scope:
 1. **NEVER combine UI rendering with query or repository changes** in the same ticket.
 2. **NEVER combine View + Presenter** in the same ticket.
 3. **NEVER combine section-builder registration with fetch-layer changes** if they can be delivered independently.
-4. **NEVER bundle multiple visual states** into one ticket if they can be built independently.
+4. **ALWAYS keep all states of one UI component in a single ticket** — splitting states across tickets causes HeroGen failures (each ticket is too small to be meaningful alone).
 5. **NEVER embed feedback UI inside a Presenter ticket** - UI component creation is separate; presenter or router tickets only trigger it.
 6. **If a task cannot be cleanly split into single-layer work** -> mark as Human, not Hero Gen.
 7. **NEVER build two interacting UI surfaces AND wire them together in the same ticket.** Surface construction and surface connection are always separate tickets — see Multi-Surface Flow Pattern below.
@@ -85,8 +85,8 @@ These patterns have been confirmed effective for this team:
 | Builder or DI wiring | Always its own ticket; often a final verification task |
 | Bottom sheet module | UI, presenter or interactor handling, router, builder or DI |
 | Feedback UI (snackbar with action) | UI component, then presenter or router trigger |
-| Multi-state banner | base view plus one task per independent state when feasible |
-| Config flag work | flag definition, consumption or version gating, then feature usage |
+| Multi-state banner | ALL states in ONE task (ViewModel enum + View with update method handling all states) |
+| Config flag work | flag definition + version gating in ONE task, then feature usage as separate task |
 | Sourcery/mock generation work | protocol annotation, generation wiring, test adoption |
 | Multi-surface entry-action flow (any feature where Surface A triggers Surface B) | One HeroGen UI ticket per visual surface with stub action closures → one Human wiring ticket that connects CTAs, presents/dismisses, threads callbacks, and registers into parent module — see Multi-Surface Flow Pattern |
 

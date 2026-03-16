@@ -154,11 +154,14 @@ tasks:
 ### Mandatory Splits
 1. View and Presenter → always separate tasks
 2. View + Router + Presenter → never in one task
-3. Multi-state views → one task per independent state
+3. Mapper directions → one task per direction
 4. Feedback UI (snackbar) → UI component + Presenter trigger = 2 tasks
-5. Mapper directions → one task per direction
-6. Bottom sheet module → View, Builder, Router, Presenter = 4 tasks
-7. Config flag + version check → 2 tasks
+
+### DO NOT Split (Combine Into One Task)
+1. Multi-state views → ALL states of one component in ONE task (never split states across tickets)
+2. ViewModel struct + View for same component → one task
+3. Config flag + version gating → one task (they're always done together)
+4. Protocol definition + its implementation in same file → one task
 
 ### UI Scope Enforcement
 Read `ui_scope` from `feature_input.yaml`:

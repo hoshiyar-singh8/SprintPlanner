@@ -9,7 +9,7 @@ import yaml
 
 VALID_LAYERS = {
     # Shared
-    "api", "config", "di", "domain", "mapper", "model", "navigation",
+    "api", "cleanup", "config", "di", "domain", "mapper", "model", "navigation",
     "test", "integration", "ui", "viewmodel",
     # iOS / VIPER
     "builder", "interactor", "presenter", "router", "view",
@@ -93,6 +93,22 @@ def validate(file_path):
         ac = task.get("acceptance_criteria", [])
         if isinstance(ac, list) and len(ac) < 1:
             warnings.append(f"{task_id}: acceptance_criteria is empty")
+
+        # Vague acceptance criteria check
+        VAGUE_PHRASES = [
+            "works correctly", "functions properly", "behaves as expected",
+            "is implemented", "looks good", "matches design",
+        ]
+        if isinstance(ac, list):
+            for criterion in ac:
+                criterion_lower = str(criterion).lower()
+                for vague in VAGUE_PHRASES:
+                    if vague in criterion_lower:
+                        warnings.append(
+                            f"{task_id}: vague acceptance criterion "
+                            f"'{criterion[:60]}...' — use specific assertions"
+                        )
+                        break
 
         # Requirement traceability (optional but recommended)
         req_ids = task.get("requirement_ids", [])
