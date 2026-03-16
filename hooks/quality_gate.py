@@ -106,7 +106,10 @@ def quality_gate(feature_dir):
                 )
 
     # 6. Cross-file: platform consistency
-    input_platform = str(feature_input.get("platform", "")).lower()
+    input_platform = str(
+        feature_input.get("detected_platform",
+                          feature_input.get("platform", ""))
+    ).lower()
     if input_platform:
         # Check context pack architecture
         arch = context_pack.get("architecture", {})

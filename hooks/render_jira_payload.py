@@ -86,11 +86,11 @@ def extract_ticket_descriptions(tickets_md_path):
     with open(tickets_md_path, "r") as f:
         content = f.read()
 
-    # Split by ticket headers (## TASK-XXX or ## [TASK-XXX])
+    # Split by ticket headers (## TASK-XXX: or ## [TASK-XXX])
     sections = re.split(r"\n(?=## )", content)
     for section in sections:
-        # Find task ID in header
-        match = re.match(r"## \[?(TASK-\S+)\]?", section)
+        # Find task ID in header — strip trailing colon/punctuation
+        match = re.match(r"## \[?(TASK-\d+)\]?", section)
         if match:
             task_id = match.group(1)
             # Remove the header line, keep the rest as description

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Verify hooks are executable
+        run: |
+          for hook in hooks/*.py; do
+            python -c "import py_compile; py_compile.compile('$hook', doraise=True)"
+            echo "OK: $hook compiles"
+          done
+
+      - name: Verify install script
+        run: bash -n install.sh && echo "OK: install.sh syntax valid"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Python syntax
+        run: |
+          python -m py_compile hooks/*.py
+          python -m py_compile tests/*.py
+          echo "All Python files compile successfully"
+
+      - name: Check for common issues
+        run: |
+          # No hardcoded credentials
+          if grep -rn "api_token\s*=" hooks/ tests/ --include="*.py" | grep -v "environ\|args\|parser\|template\|config\|test"; then
+            echo "WARNING: Possible hardcoded credentials found"
+            exit 1
+          fi
+          echo "No credential issues found"

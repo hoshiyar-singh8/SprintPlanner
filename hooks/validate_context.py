@@ -34,7 +34,12 @@ def validate(file_path):
                 errors.append(f"architecture.{field} is missing or empty")
 
         # Validate pattern
-        valid_patterns = {"viper", "mvvm", "mvi", "clean", "mvp", "mvc"}
+        valid_patterns = {
+            "viper", "mvvm", "mvi", "clean", "mvp", "mvc",
+            "bloc", "hexagonal", "layered", "microservice",
+            "component-based", "feature-sliced", "atomic",
+            "redux", "flux", "clean_architecture",
+        }
         pattern = str(arch.get("pattern", "")).lower()
         if pattern and pattern not in valid_patterns:
             errors.append(

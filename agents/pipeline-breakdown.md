@@ -116,17 +116,39 @@ tasks:
 ## Task Splitting Rules (from task-decomposition-rules)
 
 ### Layer Assignments
-- `config` — feature flags, S3 config
-- `model` / `domain` — enums, structs, value objects
+
+**Shared (all platforms):**
+- `config` — feature flags, remote config, S3 config, VariationKey
+- `model` / `domain` — enums, structs, value objects, data classes
 - `api` — endpoints, client methods, request/response models
 - `mapper` — data transformation (ONE direction per task)
-- `ui` — view/cell/component + ViewModel struct
+- `ui` — view/cell/component/composable + ViewModel struct
 - `viewmodel` — presentation data models
-- `presenter` — state machine, coordination logic
-- `router` / `navigation` — screen transitions
-- `builder` / `di` — DI assembly
 - `test` — dedicated test tasks
 - `integration` — cross-layer wiring (Human only)
+- `navigation` — screen transitions, deep links
+
+**iOS / VIPER:**
+- `presenter` — state machine, coordination logic
+- `interactor` — async data fetching
+- `router` — navigation
+- `builder` / `di` — DI assembly (Swinject)
+
+**Android / MVVM:**
+- `usecase` — business logic orchestration
+- `repository` / `data` — data access layer
+- `fragment` / `composable` — UI screen entry points
+- `di` — Hilt/Dagger/Anvil module registration
+
+**Web:**
+- `component` / `page` — React/Vue components
+- `hook` / `store` — state management
+- `service` — API service layer
+
+**Backend:**
+- `handler` / `controller` — request handlers
+- `middleware` — middleware layer
+- `schema` — database schema/migrations
 
 ### Mandatory Splits
 1. View and Presenter → always separate tasks

@@ -201,6 +201,16 @@ Collect:
 5. If all checks pass, mark pipeline as complete
 6. If checks fail, identify which stage to retry
 
+### Optional: Push to Jira
+
+After the quality gate passes, offer:
+> "Want me to push these tickets to Jira?
+> 1. **Yes** — create all tickets now
+> 2. **Dry run** — preview without creating
+> 3. **Skip** — save for later"
+
+If yes/dry-run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> [--dry-run]`
+
 ### Completion
 Present summary:
 ```
@@ -218,7 +228,8 @@ Artifacts: .ai/features/<feature-name>/
 
 Next steps:
   - Review jira_tickets.md for final content
-  - Use jira_payload.json to create Jira tickets (or run herogen-sprint-planner)
+  - Push to Jira: python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir>
+  - Or use herogen-sprint-planner for assisted ticket creation
   - Start implementation from task_specs.yaml
 ```
 

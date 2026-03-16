@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # SprintPlanner installer — copies pipeline into ~/.claude/
-# Usage: ./install.sh [--uninstall]
+# Usage: ./install.sh [--uninstall] [--version]
+
+VERSION="1.1.0"
 
 CLAUDE_DIR="$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,6 +14,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+
+# --- Version ---
+if [[ "${1:-}" == "--version" || "${1:-}" == "-v" ]]; then
+  echo "SprintPlanner v${VERSION}"
+  exit 0
+fi
 
 # --- Uninstall ---
 if [[ "${1:-}" == "--uninstall" ]]; then
@@ -218,14 +226,18 @@ else
   }
 }
 SETTINGS_EOF
-  # Replace placeholder with actual path
-  sed -i '' "s|HOOK_PATH|$CLAUDE_DIR/hooks|g" "$SETTINGS_FILE"
+  # Replace placeholder with actual path (cross-platform sed)
+  if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' "s|HOOK_PATH|$CLAUDE_DIR/hooks|g" "$SETTINGS_FILE"
+  else
+    sed -i "s|HOOK_PATH|$CLAUDE_DIR/hooks|g" "$SETTINGS_FILE"
+  fi
 fi
 
 echo ""
-echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  SprintPlanner installed successfully  ${NC}"
-echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}============================================${NC}"
+echo -e "${GREEN}  SprintPlanner v${VERSION} installed successfully  ${NC}"
+echo -e "${GREEN}============================================${NC}"
 echo ""
 echo "Installed:"
 echo "  - $(ls "$SCRIPT_DIR"/skills/ | wc -l | tr -d ' ') skills"

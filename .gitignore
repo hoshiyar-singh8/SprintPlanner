@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Pipeline artifacts (generated at runtime, not committed)
+.ai/features/
+pipeline_state.yaml
+retry_memory.yaml
+jira_payload.json
+
+# User config (contains credentials)
+jira_config.yaml
+personal-project-config.md

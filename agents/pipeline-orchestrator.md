@@ -265,6 +265,22 @@ stages:
   N+1: { status: pending }
 ```
 
+## Optional: Push to Jira
+
+After the quality gate passes, offer to push tickets to Jira:
+
+> "Pipeline complete! Want me to create these tickets in Jira?
+> 1. **Yes** — push all tickets now
+> 2. **Dry run** — show what would be created without creating
+> 3. **Skip** — I'll save the payload for later"
+
+If yes or dry run:
+- Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> [--dry-run]`
+- Requires `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars
+- Reports created ticket keys (e.g., `TASK-001 -> PROJ-456`)
+
+If skip: remind user they can run it manually later.
+
 ## Completion Output
 
 ```
@@ -284,7 +300,8 @@ Artifacts: .ai/features/<feature-name>/
 
 Next steps:
   - Review jira_tickets.md for final content
-  - Use jira_payload.json with Jira API or herogen-sprint-planner
+  - Push to Jira: python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir>
+  - Or use jira_payload.json with herogen-sprint-planner
   - Start implementation from task_specs.yaml
 ```
 

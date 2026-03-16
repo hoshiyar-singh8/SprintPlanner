@@ -155,7 +155,7 @@ Generated skills are saved to `~/.claude/skills/` and reused across future pipel
 | `pipeline-jira-writer` | Sonnet | Writes Jira ticket descriptions |
 | `pipeline-validator` | Sonnet | Cross-checks all artifacts |
 
-### Hooks (11)
+### Hooks (12)
 
 | Hook | Trigger |
 |------|---------|
@@ -169,6 +169,7 @@ Generated skills are saved to `~/.claude/skills/` and reused across future pipel
 | `validate_classification.py` | After Stage 5 |
 | `render_jira_payload.py` | After Stage 6 (generates Jira API JSON) |
 | `jira_auto_config.py` | Stage 0 (auto-discovers Jira project config via API) |
+| `create_jira_tickets.py` | Optional post-pipeline (pushes tickets to Jira API) |
 | `quality_gate.py` | After Stage 7 (final cross-file checks) |
 
 ## Customization
@@ -258,6 +259,33 @@ Edit `skills/task-decomposition-rules/SKILL.md` to adjust layer definitions and 
 ```
 
 Failed stages retry up to 2x with memory, then escalate to the user.
+
+## Push Tickets to Jira
+
+After the pipeline completes, you can push tickets directly to Jira:
+
+```bash
+# Preview what would be created
+python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/ --dry-run
+
+# Create tickets for real
+python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/
+```
+
+Requires env vars: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
+
+The pipeline also offers to push after the quality gate passes (Checkpoint 4).
+
+## Testing
+
+Run the test suite:
+
+```bash
+cd SprintPlanner
+python3 -m unittest discover -s tests -v
+```
+
+Tests cover all validation hooks, the Jira payload renderer, and the quality gate.
 
 ## License
 

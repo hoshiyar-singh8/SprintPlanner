@@ -42,13 +42,15 @@ From this, determine:
 Based on platform, search for architecture signals:
 
 **Android:**
-- Glob: `*ViewModel*`, `*Repository*`, `*UseCase*`, `*Module*` (Hilt/Dagger), `*Fragment*`, `*Activity*`
-- Grep: `@HiltViewModel`, `@Inject`, `@Module`, `@Provides`, `Composable`, `ViewBinding`
+- Glob: `*ViewModel*`, `*Repository*`, `*UseCase*`, `*Module*` (Hilt/Dagger), `*Fragment*`, `*Activity*`, `*Screen.kt`, `*Mapper*`, `*Provider*`
+- Grep: `@HiltViewModel`, `@Inject`, `@Module`, `@Provides`, `Composable`, `ViewBinding`, `@ContributesMultibinding`, `@ContributesBinding`, `ApplicationScope`, `VariationKey`, `VariationProvider`
 - Check: MVVM, MVI, Clean Architecture, MVP patterns
-- DI: Hilt, Dagger, Koin, Manual
-- UI: Jetpack Compose, XML Views, both
+- DI: Hilt, Dagger, Koin, Anvil/Whetstone, Manual
+- UI: Jetpack Compose, XML Views, both, Bento (DH design system)
 - Networking: Retrofit, Ktor, OkHttp
-- Testing: JUnit, Espresso, Mockk, Robolectric
+- Feature Flags: VariationKey objects, FeatureFlagsProvider, getBooleanSuspended/getVariationInfoSuspended
+- Testing: JUnit, Espresso, MockK, Robolectric, Turbine (for Flow testing)
+- Business Logic layers: ViewModel, Mapper, UseCase, Provider, Repository, Helper, Manager, Executor, Handler, Validator
 
 **Web (React/Next/Vue):**
 - Glob: `*Component*`, `*Hook*`, `*Store*`, `*Slice*`, `*Service*`, `*Context*`
