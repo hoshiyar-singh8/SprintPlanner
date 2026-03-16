@@ -1,0 +1,38 @@
+# Jira Configuration Template
+#
+# Copy this file to one of these locations:
+#   1. Your feature directory (highest priority)
+#   2. ~/.claude/jira_config.yaml (shared across all features)
+#
+# The pipeline uses these values when generating jira_payload.json.
+# Any field you omit will use the placeholder defaults.
+
+# Your Jira project key (e.g., "LOY", "ANDROID", "WEB")
+project_key: "PROJ"
+
+# Custom field IDs — find these in Jira Admin > Custom Fields
+story_points_field: "customfield_10053"
+repository_field: "customfield_11585"
+sprint_field: "customfield_10020"
+
+# Component IDs for each platform — find in Jira Project Settings > Components
+component_ids:
+  ios: "0"
+  android: "0"
+  web: "0"
+  backend: "0"
+
+# Priority IDs — usually standard across Jira instances
+priority_ids:
+  highest: "1"
+  high: "2"
+  medium: "3"
+  low: "4"
+  lowest: "5"
+
+# Jira account IDs (find via Jira user profile URL or API)
+default_assignee: ""      # Account ID for human tasks
+herogen_agent: ""         # Account ID for bot/agent tasks (leave empty if none)
+
+# Default repository name (shown in Jira ticket)
+default_repo: ""

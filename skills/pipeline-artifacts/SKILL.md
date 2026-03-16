@@ -10,12 +10,9 @@ Background knowledge for agents that produce or consume pipeline artifacts.
 
 ## Artifact Directory
 
-All artifacts for a feature live in:
-```
-<repo>/.ai/features/<feature-name>/
-```
-
-The `.ai/` directory should be `.gitignored`.
+All artifacts for a feature live in the `output_dir` chosen during Stage 0 intake.
+Default: `./.ai/features/<feature-name>/` in the user's current working directory.
+The pipeline never writes artifacts inside dependency directories (Carthage, node_modules, Pods, vendor, .build).
 
 ## Artifact Inventory
 
@@ -52,7 +49,8 @@ figma_urls:                                 # optional
 figma_status: provided                      # provided | not_provided | pending
 sp_max: 3                                  # max story points per task (1-3)
 ui_scope: 1                                # UI scoping ladder level (1-4)
-epic_key: "LOY-865"                         # optional, Jira epic parent
+output_dir: "/path/to/.ai/features/feature-name"  # resolved absolute path for artifacts
+epic_key: "PROJ-100"                        # optional, Jira epic parent
 labels:                                     # optional
   - "partnership-voucher"
   - "ios"

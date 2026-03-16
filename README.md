@@ -44,9 +44,8 @@ Every artifact is validated automatically:
 ### Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/SprintPlanner.git
+git clone https://github.com/hoshiyar-singh8/SprintPlanner.git
 cd SprintPlanner
-chmod +x install.sh
 ./install.sh
 ```
 

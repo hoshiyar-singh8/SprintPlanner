@@ -123,7 +123,14 @@ Ask: "Do you have Figma designs? (Figma URL, 'no', or 'not yet')"
 - "no" → `figma_urls: []`
 - "not yet" → `figma_status: pending`, note UI tasks will be approximate
 
-**Step 0f — Remaining Config**
+**Step 0f — Output Directory**
+
+Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/` in your current directory)"
+- User can accept default (cwd-based) or provide a custom path
+- **Guard against dependency directories**: if `repo_path` contains `Carthage/Checkouts/`, `node_modules/`, `vendor/`, `Pods/`, `.build/`, default to cwd instead of repo_path
+- Store the resolved absolute path as `output_dir` in feature_input.yaml
+
+**Step 0g — Remaining Config**
 
 Collect (with sensible defaults):
 - Feature name (derive from RFC if not provided)
@@ -132,9 +139,9 @@ Collect (with sensible defaults):
 - Epic key (optional)
 - Labels (optional)
 
-**Step 0g — Write Artifacts**
+**Step 0h — Write Artifacts**
 
-1. Create directory: `.ai/features/<feature-name>/`
+1. Create directory at `output_dir`
 2. Write `feature_input.yaml` with ALL collected data
 3. Run: `python3 ~/.claude/hooks/validate_input.py <path>`
 4. Initialize `pipeline_state.yaml`

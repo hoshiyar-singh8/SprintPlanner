@@ -107,7 +107,14 @@ Ask: "Do you have Figma designs for this feature? (Figma URL, or 'no' / 'not yet
 - If no → record `figma_urls: []`, note "no designs provided"
 - If "not yet" → record `figma_status: pending`, warn that UI tasks will be approximate
 
-**Step 0f — Remaining Config**
+**Step 0f — Output Directory**
+
+Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/` in your current directory)"
+- User can accept default (cwd-based) or provide a custom path
+- **Never write artifacts inside a dependency checkout or vendored directory** — if repo_path looks like `Carthage/Checkouts/`, `node_modules/`, `vendor/`, `Pods/`, default to cwd instead
+- Store the chosen path as `output_dir` in feature_input.yaml
+
+**Step 0g — Remaining Config**
 
 Collect:
 - Feature name (derive from RFC title if not provided)
@@ -116,9 +123,9 @@ Collect:
 - Epic key (optional)
 - Labels (optional)
 
-**Step 0g — Write Artifacts**
+**Step 0h — Write Artifacts**
 
-1. Create directory: `.ai/features/<feature-name>/` (in repo if local, or in cwd)
+1. Create directory: `<output_dir>` (resolved from step 0f)
 2. Write `feature_input.yaml`
 3. Run validation: `python3 ~/.claude/hooks/validate_input.py <path>`
 4. Write `pipeline_state.yaml` with stage 0 completed

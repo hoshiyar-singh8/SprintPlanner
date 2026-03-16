@@ -132,6 +132,17 @@ for hook_file in "$SCRIPT_DIR"/hooks/*.py; do
   echo "  + $hook_name"
 done
 
+# Copy config templates (don't overwrite existing user config)
+if [[ ! -f "$CLAUDE_DIR/jira_config.yaml" ]]; then
+  cp "$SCRIPT_DIR/jira_config.template.yaml" "$CLAUDE_DIR/jira_config.yaml"
+  echo "  + jira_config.yaml (template — edit with your Jira project details)"
+fi
+if [[ ! -f "$CLAUDE_DIR/personal-project-config.md" ]]; then
+  cp "$SCRIPT_DIR/personal-project-config.template.md" "$CLAUDE_DIR/personal-project-config.md"
+  echo "  + personal-project-config.md (template — edit with your team details)"
+fi
+echo ""
+
 # Configure settings.json hook (PostToolUse on Write)
 SETTINGS_FILE="$CLAUDE_DIR/settings.json"
 HOOK_CMD="python3 $CLAUDE_DIR/hooks/validate_artifact.py"

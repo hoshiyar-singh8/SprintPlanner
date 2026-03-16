@@ -1,43 +1,33 @@
 ---
 name: jira-ticket-standard
 user-invocable: false
-description: Ticket format, Hero Gen requirements, Jira config (LOY)
+description: Ticket format, Hero Gen requirements, Jira API payload structure
 ---
 
 # Jira Ticket Standard
 
 Background knowledge for agents that produce Jira ticket content.
 
-## Jira Configuration (LOY Project)
+## Jira Configuration
 
-| Field | Value |
-|-------|-------|
-| Cloud ID | `89647aba-aaa1-4669-9f6d-a9ad8db6435e` |
-| Base URL | `https://deliveryhero.atlassian.net` |
-| Project Key | `LOY` |
-| Project ID | `12188` |
-| Project Name | Pd Gr Mission Loyalty Offering |
-| Issue Type | Always **Task** (never Story, Bug, Epic, Sub-task) |
-| Default Assignee | Hoshiyar Singh (`5eda5557a0b0350b9552af08`) |
-| Hero Gen Agent | `712020:16313f8d-93e3-48d1-9d18-4058406403be` |
+Configuration is loaded from `jira_config.yaml` (feature dir or `~/.claude/`).
+The `render_jira_payload.py` hook reads this config and generates API-ready payloads.
 
-### Custom Field IDs
+Key config fields:
+- `project_key` — Jira project key (e.g., "LOY", "ANDROID", "WEB")
+- `story_points_field` — Custom field ID for story points
+- `repository_field` — Custom field ID for repository name
+- `component_ids` — Map of platform → Jira component ID
+- `default_assignee` — Account ID for human tasks
+- `herogen_agent` — Account ID for bot tasks
 
-| Field | ID |
-|-------|-----|
-| Story Points | `customfield_10053` (number) |
-| Repository | `customfield_11585` (text) |
-| Sprint | `customfield_10020` |
+See `jira_config.template.yaml` for all available fields.
 
-### Component IDs
+### Issue Type
 
-| Platform | ID |
-|----------|-----|
-| iOS | `18967` |
-| Android | `18965` |
-| Backend | `18966` |
+Always **Task** (never Story, Bug, Epic, Sub-task).
 
-### Priority IDs
+### Priority IDs (Standard)
 
 | Priority | ID |
 |----------|-----|
@@ -52,7 +42,7 @@ Background knowledge for agents that produce Jira ticket content.
 ```markdown
 ## [TICKET-ID] Title
 - **Title**: Clear, action-oriented (e.g., "Add is_partnership_voucher_enabled config key")
-- **Component**: iOS | Android | Backend
+- **Component**: iOS | Android | Backend | Web
 - **Assignee**: [Name or TBD]
 - **Story Points**: [1 | 2 | 3 — max 3, prefer 1]
 - **Description**:
@@ -73,7 +63,7 @@ Hero Gen tasks must be significantly more detailed since a bot executes them:
 ```markdown
 ## [TICKET-ID] Title
 - **Title**: Precise, unambiguous title
-- **Component**: iOS | Android
+- **Component**: iOS | Android | Web
 - **Type**: Hero Gen Task
 - **Story Points**: [1 | 2 — max 2 for Hero Gen, prefer 1]
 
@@ -84,9 +74,9 @@ Hero Gen tasks must be significantly more detailed since a bot executes them:
   - Padding: top/bottom Xpt, left/right Xpt
   - Element gap: Xpt
   - Corner radius: Xpt (specify which corners)
-  - Icon: {icon-name} Xpt × Xpt
+  - Icon: {icon-name} Xpt x Xpt
 
-- **Bento Design Tokens** (UI tasks only):
+- **Design Tokens** (UI tasks only):
   - Background: .tokenName
   - Label font: .tokenName
   - Label color: .tokenName
@@ -117,51 +107,40 @@ Hero Gen tasks must be significantly more detailed since a bot executes them:
   | States | Single | Two: .stateA / .stateB |
   ```
 
-- **Layout Code Block** (iOS/UIKit):
-  ```swift
-  private lazy var stackView: UIStackView = { ... }()
-  private func setup() { ... }
-  ```
-
-- **update(with:) Code Block** (iOS/UIKit):
-  ```swift
-  func update(with viewModel: ViewModel) {
-    // 1. Background color by state
-    // 2. Icon image by state
-    // 3. Primary label text
-  }
-  ```
+- **Layout Code Block** (platform-specific starter code)
 
 - **Dependencies**: [Blocking tickets]
-- **Estimated Effort**: X hours (≤4h for 1pt, ≤6h for 2pt)
+- **Estimated Effort**: X hours (<=4h for 1pt, <=6h for 2pt)
 ```
 
 ## Jira API Payload Structure
 
+The `render_jira_payload.py` hook generates this from `task_specs.yaml` + `jira_config.yaml`:
+
 ```json
 {
   "fields": {
-    "project": { "key": "LOY" },
+    "project": { "key": "<from jira_config>" },
     "issuetype": { "name": "Task" },
-    "summary": "[iOS] Task title here",
+    "summary": "[Platform] Task title here",
     "description": "Full markdown description",
-    "priority": { "id": "1" },
-    "components": [{ "id": "18967" }],
-    "labels": ["feature-name", "ios"],
-    "parent": { "key": "LOY-XXX" },
-    "assignee": { "accountId": "5eda5557a0b0350b9552af08" },
-    "customfield_10053": 1,
-    "customfield_11585": "deliveryhero/pd-mob-b2c-ios"
+    "priority": { "id": "2" },
+    "components": [{ "id": "<from jira_config>" }],
+    "labels": ["feature-name", "platform"],
+    "parent": { "key": "<epic_key from feature_input>" },
+    "assignee": { "accountId": "<from jira_config>" },
+    "<story_points_field>": 1,
+    "<repository_field>": "<default_repo from jira_config>"
   }
 }
 ```
 
 ## Ticket Title Convention
-- Prefix with `[iOS]` for iOS tasks
+- Prefix with platform tag: `[iOS]`, `[Android]`, `[Web]`, `[BE]`, `[Flutter]`
 - Action-oriented: "Add", "Create", "Implement", "Wire", "Update"
 - Include the specific component/module name
 
 ## Project Conventions
-- Repository field: `deliveryhero/pd-mob-b2c-ios`
-- Labels: feature-specific (e.g., `partnership-voucher`) + platform (`ios`)
-- Epic parent: specified per feature (e.g., `LOY-865` for partnership voucher)
+- Labels: feature-specific (e.g., `partnership-voucher`) + platform (e.g., `ios`)
+- Epic parent: specified per feature in `feature_input.yaml`
+- Repository: configured in `jira_config.yaml`
