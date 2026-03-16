@@ -1,0 +1,216 @@
+# SprintPlanner
+
+An AI-powered sprint planning pipeline for Claude Code. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
+
+## What it does
+
+```
+RFC/PRD → Discovery → Context Gathering → Planning → Task Breakdown → Classification → Jira Tickets → Quality Gate
+```
+
+| Stage | What happens | Output |
+|-------|-------------|--------|
+| 0. Intake | Collect inputs (RFC, repo, Figma) | `feature_input.yaml` |
+| 1. Discovery | Read RFC, extract requirements, ask clarifying questions | `clarifications.md` |
+| 2. Context | Scan repo architecture, Figma designs | `context_pack.yaml` |
+| 3. Planning | High-level implementation plan | `high_level_plan.md` |
+| 4. Breakdown | Granular single-layer task specs | `task_specs.yaml` |
+| 5. Classification | Classify tasks as bot-safe or human-only | `task_specs.yaml` (updated) |
+| 6. Jira Writing | Full ticket descriptions + API payloads | `jira_tickets.md` + `jira_payload.json` |
+| 7. Quality Gate | Cross-file validation | `validation_report.md` |
+
+### Human Checkpoints
+
+The pipeline pauses at 4 checkpoints for your review:
+- **CP1** (after Discovery): Review and answer clarifying questions
+- **CP2** (after Planning): Approve the implementation plan
+- **CP3** (after Classification): Review task classifications (bot vs human)
+- **CP4** (after Quality Gate): Final review of all outputs
+
+### Validation
+
+Every artifact is validated automatically:
+- Python validation scripts run between stages
+- A PostToolUse hook validates artifacts on every file write
+- Failed validation triggers automatic retry (max 2x), then escalates to you
+
+## Installation
+
+### Prerequisites
+
+- [Claude Code](https://claude.ai/code) installed
+- Python 3 with PyYAML (`pip3 install pyyaml`)
+
+### Install
+
+```bash
+git clone https://github.com/YOUR_USERNAME/SprintPlanner.git
+cd SprintPlanner
+chmod +x install.sh
+./install.sh
+```
+
+This copies skills, agents, and hooks into `~/.claude/` and configures the PostToolUse validation hook.
+
+### Uninstall
+
+```bash
+./install.sh --uninstall
+```
+
+## Usage
+
+Open Claude Code in any project directory and run:
+
+```
+/run-pipeline
+```
+
+You'll be prompted for:
+- **RFC/PRD path** (required) — PDF, Markdown, or text file
+- **Repository path** (required) — the codebase to scan
+- **Figma URLs** (optional) — before/after design screenshots
+- **Feature name** — derived from RFC if not provided
+- **Platform** — ios (default), android, or both
+
+### Example
+
+```
+/run-pipeline docs/my-feature-rfc.md /path/to/my-repo
+```
+
+### Resume
+
+If interrupted, run `/run-pipeline` again — it detects `pipeline_state.yaml` and resumes from the last completed stage.
+
+## What's inside
+
+### Skills (14)
+
+| Skill | Purpose |
+|-------|---------|
+| `run-pipeline` | Entry point — orchestrates the full pipeline |
+| `pipeline-artifacts` | YAML/MD schemas for all artifacts |
+| `rfc-reading` | RFC reading, requirement extraction, gap identification |
+| `clarifying-question-rules` | 6 question categories for thorough discovery |
+| `repo-context-gathering` | 3-wave parallel codebase scanning |
+| `figma-analysis` | Figma URL parsing and design diff extraction |
+| `bento-token-mapping` | Design token verification and mapping |
+| `mobile-architecture-rules` | iOS architecture pattern detection |
+| `story-point-sizing` | 1/2/3 scale estimation criteria |
+| `task-decomposition-rules` | Single-layer task splitting rules |
+| `dependency-mapping` | DAG rules and cycle detection |
+| `herogen-task-safety` | Bot-safe vs human-only classification |
+| `jira-ticket-standard` | Ticket formats and Jira API config |
+| `validation-rules` | Per-stage validation requirements |
+
+### Agents (7)
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `pipeline-orchestrator` | Opus | Manages state, calls stages, handles retries |
+| `pipeline-discovery` | Sonnet | Reads RFC, produces clarifying questions |
+| `pipeline-context` | Sonnet | Scans repo and Figma designs |
+| `pipeline-planner` | Opus | Creates high-level implementation plan |
+| `pipeline-breakdown` | Sonnet | Decomposes plan into task specs |
+| `pipeline-classifier` | Sonnet | Classifies tasks as bot/human |
+| `pipeline-jira-writer` | Sonnet | Writes Jira ticket descriptions |
+| `pipeline-validator` | Sonnet | Cross-checks all artifacts |
+
+### Hooks (10)
+
+| Hook | Trigger |
+|------|---------|
+| `validate_artifact.py` | PostToolUse (every Write) — routes to correct validator |
+| `validate_input.py` | After Stage 0 |
+| `validate_clarifications.py` | After Stage 1 |
+| `validate_context.py` | After Stage 2 |
+| `compress_context.py` | Between Stage 2-3 (trims if >10K chars) |
+| `validate_plan.py` | After Stage 3 |
+| `validate_task_specs.py` | After Stage 4 |
+| `validate_classification.py` | After Stage 5 |
+| `render_jira_payload.py` | After Stage 6 (generates Jira API JSON) |
+| `quality_gate.py` | After Stage 7 (final cross-file checks) |
+
+## Customization
+
+### Jira Configuration
+
+Edit `hooks/render_jira_payload.py` to update:
+- Project key (default: `LOY`)
+- Custom field IDs
+- Component IDs
+- Default assignee
+
+### Architecture Rules
+
+Edit `skills/mobile-architecture-rules/SKILL.md` to match your codebase patterns (VIPER, MVVM, etc.).
+
+### Task Splitting Rules
+
+Edit `skills/task-decomposition-rules/SKILL.md` to adjust layer definitions and splitting heuristics.
+
+## Pipeline Architecture
+
+```
+                    ┌─────────────────────────────────┐
+                    │  PostToolCall: validate_artifact │
+                    │  (auto-fires on every Write)    │
+                    └─────────┬───────────────────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │   0. Intake       │
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  1. Discovery     │──→ validate_input + validate_clarifications
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  ★ CP1 — Q&A      │  (user answers questions)
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  2. Context       │──→ compress_context + validate_context
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  3. Planning      │──→ validate_plan
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  ★ CP2 — Plan     │  (user approves plan)
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  4. Breakdown     │──→ validate_task_specs
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  5. Classify      │──→ validate_classification
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  ★ CP3 — Tasks    │  (user reviews classifications)
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  6. Jira Write    │──→ render_jira_payload
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  7. Quality Gate  │──→ quality_gate
+                    └─────────┬─────────┘
+                              │
+                    ┌─────────▼─────────┐
+                    │  ★ CP4 — Review   │  (final review)
+                    └─────────┬─────────┘
+                              │
+                         ✓ Complete
+```
+
+Failed stages retry up to 2x with memory, then escalate to the user.
+
+## License
+
+MIT
