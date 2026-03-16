@@ -1,5 +1,7 @@
 # SprintPlanner
 
+[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.1.0**
+
 An AI-powered sprint planning pipeline for Claude Code. Works with **any codebase** — iOS, Android, Web, Backend, Flutter, or anything else. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
 
 ## What it does

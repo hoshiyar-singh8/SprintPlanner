@@ -81,6 +81,13 @@ Scan the repo (via GitHub MCP or local Glob) for platform signals:
 Present: "I detected **[platform]** — is that correct?"
 Store `detected_platform` in feature_input.yaml.
 
+**Multi-platform support**: If the user says "both iOS and Android" or provides two repos:
+- Store `detected_platform: both`
+- Store `platforms: [ios, android]`
+- The pipeline will run context gathering for each platform
+- Tasks in task_specs.yaml get a `platform` field (ios | android | shared)
+- Jira tickets are prefixed per-platform: `[iOS] ...`, `[Android] ...`
+
 **Step 0c — Skill Check**
 
 Check `~/.claude/skills/` for platform-specific skills:

@@ -201,6 +201,8 @@ tasks:
     title: "Add is_partnership_voucher_enabled config flag"
     layer: config
     sp: 1
+    platform: ios                               # optional — ios | android | shared (for multi-platform features)
+    requirement_ids: [R1]                       # traces to Requirements table in clarifications.md
     depends_on: []
     acceptance_criteria:
       - "Config flag defined in Configuration.swift"

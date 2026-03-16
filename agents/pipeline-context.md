@@ -166,6 +166,13 @@ figma_context:                      # MANDATORY when figma_urls present, "not_pr
             platform_token: "[Bento radius constant]"
   errors: []                        # any Figma MCP errors logged here
 
+screen_states:                      # optional — for features with UI scope
+  - screen: "[Screen Name]"
+    states:
+      - name: "[State Name, e.g., loading, empty, error, content]"
+        trigger: "[What causes this state]"
+    existing_states_file: "[path to ViewModel/Presenter with state logic]"
+
 dependencies:
   - type: backend | design | library | team
     description: "[What the dependency is]"
