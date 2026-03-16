@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.2.0 (2026-03-17)
+
+### Improved (based on real HeroGen PR analysis)
+- `jira-ticket-standard` — rewritten with evidence-based ticket templates from ~40 real HeroGen PRs (merged vs closed patterns)
+- `herogen-task-safety` — Android MVVM classification rules, file-count heuristic (4+ files → human), granularity check for over-splitting
+- `pipeline-classifier` — granularity warnings, Android layer support, file-count validation
+- `pipeline-jira-writer` — three concrete ticket templates (API, UI Scope-1, Config Flag), Android formatting, platform-specific ticket structure
+- `pipeline-breakdown` — fixed over-splitting rules: all UI states in one task, config flag + version gating in one task
+- `task-decomposition-rules` — corrected multi-state view rule (combine, don't split), config flag rule (one task)
+- `pipeline-planner` — mandatory Task Granularity Guidance section to prevent breakdown over-splitting
+- `validate_classification.py` — warns when herogen task modifies 4+ existing files
+- `validate_task_specs.py` — detects vague acceptance criteria ("works correctly", "behaves as expected"), added `cleanup` layer
+- `validate_plan.py` — warns when Task Granularity Guidance section is missing
+
 ## v1.1.0 (2026-03-17)
 
 ### Added
