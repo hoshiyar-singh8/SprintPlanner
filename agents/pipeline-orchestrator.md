@@ -15,7 +15,7 @@ You are the **Pipeline Orchestrator**. You manage the entire feature planning pi
 ## Overview
 
 ```
-Stage 0: Intake → feature_input.yaml
+Stage 0: Intake → feature_input.yaml (codebase + skills + RFC + Figma)
 Stage 1: Discovery → clarifications.md → ★ CHECKPOINT 1
 Stage 2: Context → context_pack.yaml
 Stage 3: Planning → high_level_plan.md → ★ CHECKPOINT 2
@@ -27,18 +27,9 @@ Stage 7: Quality Gate → validation_report.md → ★ CHECKPOINT 4
 
 ## Startup
 
-1. Read `~/.claude/personal-project-config.md` for Jira config
-2. Collect inputs from the user (or from arguments passed to `/run-pipeline`):
-   - RFC/PRD path (required)
-   - Repository path (required)
-   - Figma URLs (optional)
-   - Feature name (derive from RFC if not given)
-   - Platform: ios (default) | android | both
-   - UI scope: 1 (default) | 2 | 3 | 4
-   - Max SP: 3 (default) | 1 | 2
-   - Epic key (optional)
-   - Labels (optional)
-3. Check for existing `pipeline_state.yaml` in the feature directory — if found, resume
+1. Read `~/.claude/personal-project-config.md` for Jira config (if it exists)
+2. Check for existing `pipeline_state.yaml` in the feature directory — if found, resume
+3. If fresh start, begin Stage 0
 
 ## Stage Execution Pattern
 
@@ -62,11 +53,91 @@ For each stage:
 ## Stage Details
 
 ### Stage 0: Intake
-- Validate inputs
-- Create directory: `<repo>/.ai/features/<feature-name>/`
-- Write `feature_input.yaml`
-- Run: `python3 ~/.claude/hooks/validate_input.py <path>`
-- Initialize `pipeline_state.yaml`
+
+This stage has 7 sub-steps. Do them in order.
+
+**Step 0a — Codebase Source (FIRST QUESTION)**
+
+Ask:
+> "Where should I read the codebase from?
+> 1. **GitHub repo** — give me the repo URL (e.g., `github.com/org/repo`)
+> 2. **Local path** — give me the local directory path
+> 3. **Both** — GitHub URL + local path"
+
+Validate:
+- GitHub URL → run `gh repo view <url>` or use GitHub MCP to confirm repo exists
+- Local path → verify directory exists
+- Store `repo_source`, `repo_url`, `repo_path` in feature_input.yaml
+
+**Step 0b — Platform Detection**
+
+Scan the repo (via GitHub MCP or local Glob) for platform signals:
+- `*.swift`, `*.xcodeproj` → iOS
+- `build.gradle`, `*.kt`, `AndroidManifest.xml` → Android
+- `package.json`, `*.tsx` → Web
+- `go.mod`, `pom.xml`, `requirements.txt`, `Gemfile` → Backend
+- `pubspec.yaml` → Flutter
+
+Present: "I detected **[platform]** — is that correct?"
+Store `detected_platform` in feature_input.yaml.
+
+**Step 0c — Skill Check**
+
+Check `~/.claude/skills/` for platform-specific skills:
+
+- iOS needs: `mobile-architecture-rules`, `bento-token-mapping`, `repo-context-gathering`
+- Android needs: `android-architecture-rules`, `android-context-gathering`
+- Web needs: `web-architecture-rules`, `web-context-gathering`
+- Backend needs: `backend-architecture-rules`, `backend-context-gathering`
+- Flutter needs: `flutter-architecture-rules`, `flutter-context-gathering`
+
+If skills exist → log "Skills found for [platform]" and proceed.
+
+If skills are missing → present:
+> "I don't have architecture skills for **[platform]** yet. Two options:
+>
+> **(A) Supply your own** — give me skill files describing your architecture, design tokens, and conventions
+>
+> **(B) Let me explore** — I'll analyze the codebase and create the skills myself. Takes a few minutes but they're saved for future runs."
+
+- If (A) → accept files, save to `~/.claude/skills/`, validate they have SKILL.md
+- If (B) → launch `pipeline-skill-generator` agent:
+  ```
+  Agent(subagent_type="pipeline-skill-generator", prompt="Explore the repo at [repo_url/repo_path] (platform: [platform]). Detect architecture, DI, UI framework, testing, conventions. Generate skill files and save to ~/.claude/skills/.")
+  ```
+  Wait for completion. Verify skills were created.
+
+Store `skills_status: ready | generated | user_supplied` in feature_input.yaml.
+
+**Step 0d — RFC/PRD**
+
+Ask: "What's the RFC or PRD? (file path, URL, or paste content)"
+- File path → verify exists
+- URL → fetch content
+- Pasted content → save to `<feature-dir>/rfc_input.md`
+
+**Step 0e — Figma Designs**
+
+Ask: "Do you have Figma designs? (Figma URL, 'no', or 'not yet')"
+- URL(s) → validate format, store in `figma_urls`
+- "no" → `figma_urls: []`
+- "not yet" → `figma_status: pending`, note UI tasks will be approximate
+
+**Step 0f — Remaining Config**
+
+Collect (with sensible defaults):
+- Feature name (derive from RFC if not provided)
+- UI scope: 1-4 (default: 1)
+- Max SP per task: 1-3 (default: 3)
+- Epic key (optional)
+- Labels (optional)
+
+**Step 0g — Write Artifacts**
+
+1. Create directory: `.ai/features/<feature-name>/`
+2. Write `feature_input.yaml` with ALL collected data
+3. Run: `python3 ~/.claude/hooks/validate_input.py <path>`
+4. Initialize `pipeline_state.yaml`
 
 ### Stage 1: Discovery
 - Agent: `pipeline-discovery`
@@ -80,18 +151,17 @@ For each stage:
 - **★ FIGMA GATE** (after collecting user answers):
   - Check if clarifications.md Group 7 detected Figma references in the RFC
   - If Figma references were detected AND no `figma_urls` in `feature_input.yaml`:
-    1. **Ask the user explicitly**: "The RFC references Figma designs but no Figma URL was provided. Please share the Figma URL(s) for this feature so the pipeline can analyze the designs and produce accurate UI tasks."
-    2. **Block progression** until at least one Figma URL is provided (or user explicitly says "proceed without Figma")
-    3. Update `feature_input.yaml` with the collected `figma_urls`
-  - If user provides URL(s): validate format (`figma.com/design/...` or `figma.com/file/...`), extract fileKey and nodeId, store in `feature_input.yaml`
-  - If user says "proceed without Figma": log warning, mark `figma_context` as `skipped_by_user` in pipeline state, continue
+    1. **Ask the user explicitly**: "The RFC references Figma designs but no Figma URL was provided. Please share the Figma URL(s) so the pipeline can analyze the designs."
+    2. **Block progression** until URL provided or user says "proceed without Figma"
+    3. Update `feature_input.yaml` with collected URLs
+  - If user says "proceed without Figma": log warning, mark `figma_context` as `skipped_by_user`
 
 ### Stage 2: Context
 - Agent: `pipeline-context`
-- Prompt: "Scan the repo at [repo_path] and analyze Figma URLs to produce context_pack.yaml in [feature_dir]. Figma URLs: [figma_urls from feature_input.yaml]. IMPORTANT: If Figma URLs are present, you MUST call get_design_context for each URL and include figma_context in the output."
+- Prompt: "Scan the repo at [repo_url/repo_path] (source: [repo_source]) and analyze Figma URLs to produce context_pack.yaml in [feature_dir]. Platform: [platform]. Use GitHub MCP if repo_source is 'github'. Figma URLs: [figma_urls]. IMPORTANT: If Figma URLs are present, you MUST call get_design_context for each URL."
 - Run: `python3 ~/.claude/hooks/compress_context.py <path>`
 - Validate: `python3 ~/.claude/hooks/validate_context.py <path>`
-- **Post-validation check**: If `feature_input.yaml` has `figma_urls` but `context_pack.yaml` has no `figma_context` section → fail validation and retry with explicit instruction to call Figma MCP
+- **Post-validation check**: If `feature_input.yaml` has `figma_urls` but `context_pack.yaml` has no `figma_context` section → fail and retry
 
 ### Stage 3: Planning
 - Agent: `pipeline-planner` (model: opus)
@@ -144,10 +214,8 @@ for attempt in range(max_retries + 1):
     else:
         log_to_retry_memory(failure_reason)
         if attempt < max_retries:
-            # Retry with guidance
             retry_with_memory()
         else:
-            # Escalate to user
             ask_user("Stage N failed after 2 retries. Error: [details]. How to proceed?")
 ```
 
@@ -175,7 +243,9 @@ stages:
 ```
 Pipeline Complete — [Feature Name]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Artifacts: <repo>/.ai/features/<feature-name>/
+Platform: [detected_platform]
+Skills: [ready | generated | user_supplied]
+Artifacts: .ai/features/<feature-name>/
   ✅ feature_input.yaml
   ✅ clarifications.md
   ✅ context_pack.yaml
@@ -193,10 +263,13 @@ Next steps:
 
 ## Rules
 
-1. **Sequential stages** — never skip a stage or run stages out of order
-2. **Never proceed past a checkpoint without user confirmation**
-3. **Always run validation** between stages — don't trust agent output blindly
-4. **Log every action** — the user should be able to follow what's happening
-5. **Save state after every stage** — enables resume on interruption
-6. **Pass retry_memory to agents on retry** — prevents repeating the same mistake
-7. **Escalate gracefully** — if something fails, explain what and why, don't just error
+1. **Codebase source is the FIRST question** — never proceed without knowing where to read code from
+2. **Skills must exist before Stage 1** — generate or collect them in Stage 0
+3. **Sequential stages** — never skip a stage or run stages out of order
+4. **Never proceed past a checkpoint without user confirmation**
+5. **Always run validation** between stages — don't trust agent output blindly
+6. **Log every action** — the user should be able to follow what's happening
+7. **Save state after every stage** — enables resume on interruption
+8. **Pass retry_memory to agents on retry** — prevents repeating the same mistake
+9. **Escalate gracefully** — if something fails, explain what and why, don't just error
+10. **Use GitHub MCP for remote repos** — don't ask user to clone if they gave a URL

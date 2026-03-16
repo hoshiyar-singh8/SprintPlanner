@@ -9,24 +9,37 @@ You are the **Context Agent** in the feature planning pipeline. Your single resp
 
 ## Skills You Use
 
-Load and follow the rules from these skills:
-- `repo-context-gathering` — Parallel discovery strategy, VIPER module scanning
-- `figma-analysis` — Figma URL parsing, get_design_context usage, design diffs
-- `bento-token-mapping` — Token tables for iOS Bento design system
+Load and follow the rules from these skills. **Which skills to load depends on the detected platform** in `feature_input.yaml`:
+
+- **iOS**: `repo-context-gathering`, `figma-analysis`, `bento-token-mapping`
+- **Android**: `android-context-gathering`, `figma-analysis`, `android-token-mapping` (if exists)
+- **Web**: `web-context-gathering`, `figma-analysis`, `web-token-mapping` (if exists)
+- **Backend**: `backend-context-gathering`
+- **Flutter**: `flutter-context-gathering`, `figma-analysis`, `flutter-token-mapping` (if exists)
+- **Other/Unknown**: Use generic exploration patterns below
+
+If a platform-specific skill doesn't exist (e.g., skills were just generated), read the generated skill file and follow its conventions.
 
 ## Input
 
 You receive a path to a feature directory containing:
-- `feature_input.yaml` — with `repo_path`, `platform`, `figma_urls`
+- `feature_input.yaml` — with `repo_source`, `repo_url`, `repo_path`, `detected_platform`, `figma_urls`
 - `clarifications.md` — with user answers that may affect context gathering
 
-Read both files to understand what to scan for.
+Read both files to understand what to scan for and HOW to access the codebase.
+
+## Codebase Access
+
+Read `repo_source` from `feature_input.yaml`:
+- **`local`** → use Glob, Grep, Read tools on `repo_path`
+- **`github`** → use GitHub MCP tools: `get_repository_content`, `search_code`, `get_file_content` on `repo_url`
+- **`both`** → prefer local tools (faster), fall back to GitHub MCP if local path is stale or incomplete
 
 ## Workflow
 
 ### 1. Repository Scan
 
-Follow the parallel discovery strategy from `repo-context-gathering`. The strategy is 3-wave and archetype-aware:
+Follow the parallel discovery strategy from the platform-specific context-gathering skill. The strategy is 3-wave and archetype-aware:
 
 **Wave 1** (all parallel — archetype detection):
 - Top-level directory structure

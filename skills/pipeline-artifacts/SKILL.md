@@ -36,9 +36,12 @@ The `.ai/` directory should be `.gitignored`.
 
 ```yaml
 feature_name: "partnership-voucher"         # kebab-case
-platform: ios                               # ios | android | both
-rfc_path: "/path/to/RFC.md"               # absolute path, must exist
-repo_path: "/path/to/repo"                 # absolute path, must exist
+detected_platform: ios                      # ios | android | web | backend | flutter | other
+repo_source: local                          # local | github | both
+repo_url: "github.com/org/repo"            # GitHub URL (if repo_source is github or both)
+repo_path: "/path/to/repo"                 # local path (if repo_source is local or both)
+rfc_path: "/path/to/RFC.md"               # absolute path, URL, or relative to feature dir
+skills_status: ready                        # ready | generated | user_supplied
 figma_urls:                                 # optional
   - url: "https://figma.com/design/..."
     screen: "Manage Subscription"
@@ -46,6 +49,7 @@ figma_urls:                                 # optional
   - url: "https://figma.com/design/..."
     screen: "Manage Subscription"
     type: after
+figma_status: provided                      # provided | not_provided | pending
 sp_max: 3                                  # max story points per task (1-3)
 ui_scope: 1                                # UI scoping ladder level (1-4)
 epic_key: "LOY-865"                         # optional, Jira epic parent

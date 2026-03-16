@@ -12,7 +12,7 @@ You are the **pipeline orchestrator**. Your job is to drive a feature through 8 
 ## Usage
 
 ```
-/run-pipeline [rfc-path] [repo-path] [figma-url]
+/run-pipeline [rfc-path] [figma-url]
 ```
 
 All arguments are optional — if not provided, you'll ask for them.
@@ -20,7 +20,7 @@ All arguments are optional — if not provided, you'll ask for them.
 ## Pipeline Stages
 
 ```
-0. Intake → feature_input.yaml
+0. Intake → feature_input.yaml (includes codebase + skill check + Figma ask)
 1. Discovery → clarifications.md + ★ CHECKPOINT 1 (user answers questions)
 2. Context → context_pack.yaml
 3. Planning → high_level_plan.md + ★ CHECKPOINT 2 (user approves plan)
@@ -33,25 +33,95 @@ All arguments are optional — if not provided, you'll ask for them.
 ## Orchestration Instructions
 
 ### Before Starting
-1. Read `~/.claude/personal-project-config.md` for Jira config
+1. Read `~/.claude/personal-project-config.md` for Jira config (if it exists)
 2. Check if a `pipeline_state.yaml` exists for this feature (resume support)
 3. If resuming, skip completed stages and pick up where we left off
 
 ### Stage 0: Intake
-1. Collect inputs from user (or from command arguments):
-   - RFC/PRD path (required)
-   - Repository path (required)
-   - Figma URLs (optional, can be multiple)
-   - Feature name (derive from RFC title if not provided)
-   - Platform: ios (default) | android | both
-   - UI scope level: 1-4 (default: 1)
-   - Max SP per task: 1-3 (default: 3)
-   - Epic key (optional)
-   - Labels (optional)
-2. Create directory: `<repo>/.ai/features/<feature-name>/`
-3. Write `feature_input.yaml`
-4. Run validation: `python3 ~/.claude/hooks/validate_input.py <path>`
-5. Write `pipeline_state.yaml` with stage 0 completed
+
+**Step 0a — Codebase Source (MANDATORY FIRST QUESTION)**
+
+Ask the user:
+> "Where should I read the codebase from?
+> 1. **GitHub repo** — give me the repo URL (e.g., `github.com/org/repo`) and I'll use GitHub MCP to read it
+> 2. **Local path** — give me the local directory path
+> 3. **Both** — GitHub URL for browsing + local path for file reads"
+
+Based on answer:
+- If GitHub URL → validate with `gh repo view <url>` or GitHub MCP. Store as `repo_source: github`, `repo_url: <url>`, `repo_path: null`
+- If local path → verify directory exists. Store as `repo_source: local`, `repo_url: null`, `repo_path: <path>`
+- If both → store both. `repo_source: both`
+
+**Step 0b — Platform & Stack Detection**
+
+Automatically detect the platform by scanning the repo:
+- Look for: `build.gradle`, `AndroidManifest.xml`, `*.kt`, `*.java` → **Android**
+- Look for: `*.xcodeproj`, `*.xcworkspace`, `Podfile`, `Cartfile`, `*.swift` → **iOS**
+- Look for: `package.json`, `tsconfig.json`, `*.tsx`, `*.jsx` → **Web/React**
+- Look for: `go.mod`, `Cargo.toml`, `pom.xml`, `build.sbt`, `requirements.txt`, `Gemfile` → **Backend**
+- Look for: `flutter.yaml`, `pubspec.yaml` → **Flutter**
+- Look for: `*.csproj`, `*.sln` → **.NET**
+
+Present to user: "I detected **[platform]** — is that correct?"
+
+**Step 0c — Skill Check**
+
+Check if platform-specific skills exist in `~/.claude/skills/`:
+
+| Platform | Required Skills | Shipped with SprintPlanner? |
+|----------|----------------|---------------------------|
+| iOS | `mobile-architecture-rules`, `bento-token-mapping`, `repo-context-gathering` | Yes |
+| Android | `android-architecture-rules`, `material-token-mapping`, `android-context-gathering` | No |
+| Web | `web-architecture-rules`, `web-token-mapping`, `web-context-gathering` | No |
+| Backend | `backend-architecture-rules`, `backend-context-gathering` | No |
+| Flutter | `flutter-architecture-rules`, `flutter-context-gathering` | No |
+
+If required skills **exist** → proceed normally.
+
+If required skills **DON'T exist** → present options:
+> "I don't have architecture skills for **[platform]** yet. Two options:
+>
+> **(A) Supply your own skills** — provide me with skill files that describe your architecture patterns, design system tokens, and context gathering strategy. I'll install them.
+>
+> **(B) Let me explore** — I'll analyze your codebase, learn the architecture patterns, DI framework, design system, testing conventions, and create the skills myself. This will take a few minutes but the skills will be saved for future runs.
+>
+> Which do you prefer?"
+
+If user picks (A) → accept skill files, validate structure, save to `~/.claude/skills/`
+If user picks (B) → launch `pipeline-skill-generator` agent with the repo. Agent will:
+1. Explore the repo structure
+2. Identify architecture pattern (MVVM, MVI, Clean, etc.)
+3. Identify DI framework, networking, UI framework, design system, testing
+4. Create platform-specific skill files
+5. Save to `~/.claude/skills/`
+6. Report what was created
+
+**Step 0d — RFC/PRD**
+
+Ask: "What's the RFC or PRD for this feature? (file path, URL, or paste the content)"
+
+**Step 0e — Figma Designs**
+
+Ask: "Do you have Figma designs for this feature? (Figma URL, or 'no' / 'not yet')"
+- If yes → collect URLs, validate format
+- If no → record `figma_urls: []`, note "no designs provided"
+- If "not yet" → record `figma_status: pending`, warn that UI tasks will be approximate
+
+**Step 0f — Remaining Config**
+
+Collect:
+- Feature name (derive from RFC title if not provided)
+- UI scope level: 1-4 (default: 1)
+- Max SP per task: 1-3 (default: 3)
+- Epic key (optional)
+- Labels (optional)
+
+**Step 0g — Write Artifacts**
+
+1. Create directory: `.ai/features/<feature-name>/` (in repo if local, or in cwd)
+2. Write `feature_input.yaml`
+3. Run validation: `python3 ~/.claude/hooks/validate_input.py <path>`
+4. Write `pipeline_state.yaml` with stage 0 completed
 
 ### Stage 1: Discovery
 1. Launch `pipeline-discovery` agent with `feature_input.yaml` path
@@ -63,7 +133,7 @@ All arguments are optional — if not provided, you'll ask for them.
 
 ### Stage 2: Context
 1. Launch `pipeline-context` agent with `feature_input.yaml` and `clarifications.md`
-2. Agent scans repo and Figma, produces `context_pack.yaml`
+2. Agent scans repo (via local path or GitHub MCP) and Figma, produces `context_pack.yaml`
 3. Run: `python3 ~/.claude/hooks/compress_context.py <path>` (trim if oversized)
 4. Run: `python3 ~/.claude/hooks/validate_context.py <path>`
 5. Update `pipeline_state.yaml`
@@ -110,7 +180,7 @@ Present summary:
 ```
 Pipeline Complete — [Feature Name]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Artifacts: <repo>/.ai/features/<feature-name>/
+Artifacts: .ai/features/<feature-name>/
   ✅ feature_input.yaml
   ✅ clarifications.md
   ✅ context_pack.yaml
@@ -139,11 +209,13 @@ Next steps:
 - If validation fails → show specific failure, retry stage with guidance
 - If user cancels at a checkpoint → save state, can resume later with `/run-pipeline`
 - If a file path doesn't exist → ask user to correct, don't proceed with invalid paths
+- If GitHub MCP is unavailable → fall back to asking for local path
 
 ## Agent Delegation
 
 Use the Agent tool to launch each pipeline agent:
 ```
+Agent(subagent_type="pipeline-skill-generator", prompt="...")  # only if skills missing
 Agent(subagent_type="pipeline-discovery", prompt="...")
 Agent(subagent_type="pipeline-context", prompt="...")
 Agent(subagent_type="pipeline-planner", prompt="...", model="opus")

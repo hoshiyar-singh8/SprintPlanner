@@ -1,16 +1,16 @@
 # SprintPlanner
 
-An AI-powered sprint planning pipeline for Claude Code. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
+An AI-powered sprint planning pipeline for Claude Code. Works with **any codebase** — iOS, Android, Web, Backend, Flutter, or anything else. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
 
 ## What it does
 
 ```
-RFC/PRD → Discovery → Context Gathering → Planning → Task Breakdown → Classification → Jira Tickets → Quality Gate
+Codebase → Auto-detect platform → Generate skills (if needed) → RFC → Figma → Plan → Tasks → Jira
 ```
 
 | Stage | What happens | Output |
 |-------|-------------|--------|
-| 0. Intake | Collect inputs (RFC, repo, Figma) | `feature_input.yaml` |
+| 0. Intake | Ask for codebase (GitHub/local), detect platform, check skills, ask for RFC + Figma | `feature_input.yaml` |
 | 1. Discovery | Read RFC, extract requirements, ask clarifying questions | `clarifications.md` |
 | 2. Context | Scan repo architecture, Figma designs | `context_pack.yaml` |
 | 3. Planning | High-level implementation plan | `high_level_plan.md` |
@@ -66,22 +66,53 @@ Open Claude Code in any project directory and run:
 /run-pipeline
 ```
 
-You'll be prompted for:
-- **RFC/PRD path** (required) — PDF, Markdown, or text file
-- **Repository path** (required) — the codebase to scan
-- **Figma URLs** (optional) — before/after design screenshots
-- **Feature name** — derived from RFC if not provided
-- **Platform** — ios (default), android, or both
+The pipeline will ask you step by step:
+
+1. **"Where's your codebase?"** — GitHub repo URL, local path, or both
+2. **Auto-detects your platform** — iOS, Android, Web, Backend, Flutter
+3. **Checks for matching skills** — if missing, offers to explore your repo and generate them
+4. **"What's the RFC/PRD?"** — file path, URL, or paste content
+5. **"Do you have Figma designs?"** — Figma URLs or skip
+6. Then runs the 8-stage pipeline with checkpoints
 
 ### Example
 
 ```
-/run-pipeline docs/my-feature-rfc.md /path/to/my-repo
+/run-pipeline
 ```
+
+> "Where should I read the codebase from?"
+> → `github.com/myorg/my-android-app`
+>
+> "I detected **Android** (Kotlin + Gradle). Is that correct?"
+> → Yes
+>
+> "I don't have architecture skills for Android yet. (A) Supply your own, or (B) Let me explore?"
+> → B
+>
+> *[explores repo, creates android-architecture-rules, android-context-gathering]*
+>
+> "What's the RFC?"
+> → `docs/feature-rfc.pdf`
+>
+> "Do you have Figma designs?"
+> → `https://figma.com/design/abc123/...`
 
 ### Resume
 
 If interrupted, run `/run-pipeline` again — it detects `pipeline_state.yaml` and resumes from the last completed stage.
+
+### Supported Platforms
+
+| Platform | Skills shipped? | Auto-generate? |
+|----------|----------------|---------------|
+| iOS | Yes (VIPER, Bento, UIKit) | N/A |
+| Android | No | Yes — explores repo, learns MVVM/Hilt/Compose/etc. |
+| Web | No | Yes — explores repo, learns React/Vue/Next/etc. |
+| Backend | No | Yes — explores repo, learns Go/Java/Python/etc. |
+| Flutter | No | Yes — explores repo, learns BLoC/Riverpod/etc. |
+
+Generated skills are saved to `~/.claude/skills/` and reused across future pipeline runs.
 
 ## What's inside
 
@@ -104,13 +135,14 @@ If interrupted, run `/run-pipeline` again — it detects `pipeline_state.yaml` a
 | `jira-ticket-standard` | Ticket formats and Jira API config |
 | `validation-rules` | Per-stage validation requirements |
 
-### Agents (7)
+### Agents (8)
 
 | Agent | Model | Role |
 |-------|-------|------|
 | `pipeline-orchestrator` | Opus | Manages state, calls stages, handles retries |
+| `pipeline-skill-generator` | Opus | Explores unfamiliar repos, generates platform skills |
 | `pipeline-discovery` | Sonnet | Reads RFC, produces clarifying questions |
-| `pipeline-context` | Sonnet | Scans repo and Figma designs |
+| `pipeline-context` | Sonnet | Scans repo (local or GitHub MCP) and Figma designs |
 | `pipeline-planner` | Opus | Creates high-level implementation plan |
 | `pipeline-breakdown` | Sonnet | Decomposes plan into task specs |
 | `pipeline-classifier` | Sonnet | Classifies tasks as bot/human |
