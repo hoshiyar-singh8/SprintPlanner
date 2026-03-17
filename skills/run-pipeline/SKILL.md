@@ -80,7 +80,7 @@ Present to user: "I detected **[platform]** — is that correct?"
 
 Check if platform-specific skills exist in `~/.claude/skills/`:
 
-| Platform | Required Skills | Shipped with SprintPlanner? |
+| Platform | Required Skills | Shipped with FeaturePlanner? |
 |----------|----------------|---------------------------|
 | iOS | `mobile-architecture-rules`, `bento-token-mapping`, `repo-context-gathering` | Yes |
 | Android | `android-architecture-rules`, `material-token-mapping`, `android-context-gathering` | No |

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# SprintPlanner installer — copies pipeline into ~/.claude/
+# FeaturePlanner installer — copies pipeline into ~/.claude/
 # Usage: ./install.sh [--uninstall] [--update] [--check] [--setup-mcps] [--version]
 
 VERSION="1.4.1"
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 # --- Version ---
 if [[ "${1:-}" == "--version" || "${1:-}" == "-v" ]]; then
-  echo "SprintPlanner v${VERSION}"
+  echo "FeaturePlanner v${VERSION}"
   exit 0
 fi
 
@@ -40,7 +40,7 @@ fi
 
 # --- Update (git pull + reinstall) ---
 if [[ "${1:-}" == "--update" ]]; then
-  echo -e "${GREEN}Updating SprintPlanner...${NC}"
+  echo -e "${GREEN}Updating FeaturePlanner...${NC}"
   cd "$SCRIPT_DIR"
   BEFORE=$VERSION
   git pull origin main --quiet || { echo -e "${RED}Failed to pull from remote.${NC}"; exit 1; }
@@ -65,7 +65,7 @@ fi
 
 # --- Uninstall ---
 if [[ "${1:-}" == "--uninstall" ]]; then
-  echo -e "${YELLOW}Uninstalling SprintPlanner...${NC}"
+  echo -e "${YELLOW}Uninstalling FeaturePlanner...${NC}"
 
   # Remove skills
   for skill_dir in "$SCRIPT_DIR"/skills/*/; do
@@ -117,7 +117,7 @@ fi
 # --- Install ---
 if [[ "${RUN_MCP_ONLY:-}" != "true" ]]; then
 
-echo -e "${GREEN}Installing SprintPlanner into $CLAUDE_DIR${NC}"
+echo -e "${GREEN}Installing FeaturePlanner into $CLAUDE_DIR${NC}"
 
 # Show upgrade/reinstall info
 if [[ -f "$CLAUDE_DIR/.sprint-planner-version" ]]; then
@@ -302,7 +302,7 @@ fi
 
 echo ""
 echo -e "${GREEN}============================================${NC}"
-echo -e "${GREEN}  SprintPlanner v${VERSION} installed successfully  ${NC}"
+echo -e "${GREEN}  FeaturePlanner v${VERSION} installed successfully  ${NC}"
 echo -e "${GREEN}============================================${NC}"
 echo ""
 echo "Installed:"
@@ -325,7 +325,7 @@ if [[ "${SKIP_MCP_SETUP:-}" != "true" ]]; then
 echo ""
 echo "MCP Server Setup"
 echo "━━━━━━━━━━━━━━━━"
-echo "SprintPlanner uses 3 optional MCP servers. I'll check each one"
+echo "FeaturePlanner uses 3 optional MCP servers. I'll check each one"
 echo "and offer to install any that are missing."
 echo ""
 
