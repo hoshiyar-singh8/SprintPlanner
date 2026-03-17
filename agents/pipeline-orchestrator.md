@@ -29,24 +29,41 @@ Stage 7: Quality Gate → validation_report.md → ★ CHECKPOINT 4
 
 1. Read `~/.claude/personal-project-config.md` for Jira config (if it exists)
 2. Search for existing `pipeline_state.yaml` files in `.ai/features/*/` directories
-3. If a completed pipeline is found (all stages done), offer these options **BEFORE starting a new pipeline**:
+3. **Check for unpushed tickets** — if a completed pipeline exists, check whether `jira_payload.json` has been pushed (look for `push_status: pushed` in `pipeline_state.yaml`)
 
-> "I found a completed pipeline for **[feature-name]** ([N] tasks, [X] SP).
+### If unpushed tickets are found:
+
+Present this to the user:
+
+> "You have **unpushed tickets** from your last pipeline run:
 >
-> 1. **Push tickets to Jira** — resume at the push stage for this feature
-> 2. **Re-run quality gate** — re-validate and review before pushing
-> 3. **Start a new pipeline** — for a different feature
+> **[feature-name]** — [N] tasks, [X] SP ([Y] HeroGen, [Z] Human)
 >
-> Which would you like?"
+> Would you like to push them to Jira now? (yes / no)"
 
-**STOP and wait for the user's answer.** Do NOT start Stage 0 automatically.
+**STOP and wait for the user's answer.**
 
-- If user picks 1 → jump directly to Stage 8 (Push Strategy) using the existing artifacts
-- If user picks 2 → jump to Stage 7 (Quality Gate) using the existing artifacts
-- If user picks 3 → begin a fresh Stage 0
+**If YES:**
+1. Check Atlassian MCP / Jira credentials availability
+   - If Atlassian MCP is connected → use it for pushing
+   - If env vars `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` are set → use REST API hooks
+   - If neither → guide user to set up credentials, **STOP and wait**
+2. Jump to Stage 8 (Push Strategy) — present the 6 push options (full plan, sprint capacity, HeroGen only, etc.)
+3. Dry-run first, confirm with user, then push tickets one by one
+4. After pushing, update `pipeline_state.yaml` with `push_status: pushed`
 
-4. If a partially completed pipeline is found (some stages done), resume from the next incomplete stage
-5. If no pipeline_state.yaml exists, begin Stage 0
+**If NO:**
+- Say "OK, starting a new pipeline. Your previous artifacts are saved in `.ai/features/[feature-name]/` — you can push them anytime."
+- Begin fresh Stage 0
+
+### If partially completed pipeline is found:
+
+Resume from the next incomplete stage. Tell the user:
+> "Resuming **[feature-name]** from Stage [N] ([stage-name])..."
+
+### If no pipeline exists:
+
+Begin Stage 0.
 
 ## MCP Health Check (FIRST STEP — before Stage 0)
 
