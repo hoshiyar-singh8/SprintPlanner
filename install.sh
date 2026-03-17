@@ -320,17 +320,14 @@ VEOF
 
 fi  # end of if [[ "${RUN_MCP_ONLY:-}" != "true" ]]
 
-# --- MCP Server Setup (Global — works across all accounts) ---
-export FEATUREPLANNER_SCRIPT_DIR="$SCRIPT_DIR"
+# --- MCP Server Setup (via official `claude mcp add` CLI) ---
 if [[ "${SKIP_MCP_SETUP:-}" != "true" ]]; then
 echo ""
 echo "MCP Server Setup"
 echo "━━━━━━━━━━━━━━━━"
 echo "FeaturePlanner uses 3 optional MCP servers."
-echo "These are installed globally in ~/.claude.json — they work across all accounts."
+echo "Installed via 'claude mcp add -s user' — works across all projects."
 echo ""
-
-CLAUDE_JSON="$HOME/.claude.json"
 
 # Helper: case-insensitive yes check (works on macOS bash 3)
 is_yes() {
@@ -339,89 +336,14 @@ is_yes() {
   esac
 }
 
-# Helper: check if an MCP is already in ALL projects + script dir in ~/.claude.json
-mcp_exists_global() {
-  python3 -c "
-import json, sys, os
-with open('$CLAUDE_JSON') as f:
-    data = json.load(f)
-projects = data.get('projects', {})
-if not projects:
-    sys.exit(1)
-# Check all existing projects
-for path, pdata in projects.items():
-    if isinstance(pdata, dict):
-        mcps = pdata.get('mcpServers', {})
-        if '$1' not in mcps:
-            sys.exit(1)
-# Also check that the script dir has an entry
-script_dir = os.environ.get('FEATUREPLANNER_SCRIPT_DIR', '')
-if script_dir:
-    rp = os.path.realpath(script_dir)
-    if rp not in projects and script_dir not in projects:
-        sys.exit(1)
-sys.exit(0)
-" 2>/dev/null
+# Helper: check if an MCP is already installed
+mcp_installed() {
+  claude mcp list 2>/dev/null | grep -qi "$1"
 }
 
-# Helper: add an MCP to EVERY project in ~/.claude.json (this is how Claude Code reads MCPs)
-add_mcp_global() {
-  local name="$1"
-  local mcp_type="$2"
-  local url="$3"
-  python3 -c "
-import json
-with open('$CLAUDE_JSON', 'r') as f:
-    data = json.load(f)
-import os
-mcp_entry = {'type': '$mcp_type', 'url': '$url'}
-# Add to top-level mcpServers
-if 'mcpServers' not in data:
-    data['mcpServers'] = {}
-data['mcpServers']['$name'] = mcp_entry
-# Add to every existing project (Claude Code reads MCPs per-project)
-projects = data.get('projects', {})
-count = 0
-for path, pdata in projects.items():
-    if isinstance(pdata, dict):
-        if 'mcpServers' not in pdata:
-            pdata['mcpServers'] = {}
-        if '$name' not in pdata['mcpServers']:
-            pdata['mcpServers']['$name'] = mcp_entry
-            count += 1
-# Also ensure common paths have entries (for new projects)
-cwd = os.getcwd()
-script_dir = os.environ.get('FEATUREPLANNER_SCRIPT_DIR', cwd)
-# Collect unique paths to check
-extra_paths = set()
-for p in [cwd, script_dir]:
-    rp = os.path.realpath(p)  # resolve symlinks (/tmp -> /private/tmp)
-    extra_paths.add(p)
-    extra_paths.add(rp)
-cwd_variants = list(extra_paths)
-for cwd_path in cwd_variants:
-    if cwd_path not in projects:
-        projects[cwd_path] = {
-            'mcpServers': {},
-            'enabledMcpjsonServers': [],
-            'disabledMcpjsonServers': [],
-            'mcpContextUris': []
-        }
-        count += 1
-    if '$name' not in projects[cwd_path].get('mcpServers', {}):
-        if 'mcpServers' not in projects[cwd_path]:
-            projects[cwd_path]['mcpServers'] = {}
-        projects[cwd_path]['mcpServers']['$name'] = mcp_entry
-        count += 1
-with open('$CLAUDE_JSON', 'w') as f:
-    json.dump(data, f, indent=2)
-print(f'  Added $name to {count} projects + global config')
-"
-}
-
-if [[ ! -f "$CLAUDE_JSON" ]]; then
-  echo -e "${YELLOW}~/.claude.json not found — skipping MCP setup.${NC}"
-  echo "  Run Claude Code once first, then re-run ./install.sh --setup-mcps"
+if ! command -v claude &>/dev/null; then
+  echo -e "${YELLOW}Claude CLI not found — skipping MCP setup.${NC}"
+  echo "  Install Claude Code first, then re-run ./install.sh --setup-mcps"
 else
 
   MCPS_INSTALLED=0
@@ -429,14 +351,14 @@ else
 
   # ── 1. Figma MCP ───────────────────────────────────────────────
   echo -e "1/3 ${GREEN}Figma MCP${NC} — analyze Figma designs for UI tasks"
-  if mcp_exists_global "figma-remote-mcp"; then
+  if mcp_installed "figma"; then
     echo -e "     ${GREEN}[already installed]${NC}"
     MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
   else
     echo -n "     Install? (y/n): "
     read -r ans
     if is_yes "$ans"; then
-      add_mcp_global "figma-remote-mcp" "http" "https://mcp.figma.com/mcp"
+      claude mcp add --transport http -s user figma-remote-mcp https://mcp.figma.com/mcp 2>&1 | sed 's/^/     /'
       echo -e "     ${GREEN}[installed — authenticate in Claude on first use]${NC}"
       MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
     else
@@ -448,14 +370,14 @@ else
 
   # ── 2. Atlassian MCP ───────────────────────────────────────────
   echo -e "2/3 ${GREEN}Atlassian MCP${NC} — read/create Jira tickets and Confluence pages"
-  if mcp_exists_global "atlassian"; then
+  if mcp_installed "atlassian"; then
     echo -e "     ${GREEN}[already installed]${NC}"
     MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
   else
     echo -n "     Install? (y/n): "
     read -r ans
     if is_yes "$ans"; then
-      add_mcp_global "atlassian" "http" "https://mcp.atlassian.com/v1/mcp"
+      claude mcp add --transport http -s user atlassian https://mcp.atlassian.com/v1/mcp 2>&1 | sed 's/^/     /'
       echo -e "     ${GREEN}[installed — authenticate in Claude on first use]${NC}"
       MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
     else
@@ -467,14 +389,14 @@ else
 
   # ── 3. Slack MCP ────────────────────────────────────────────────
   echo -e "3/3 ${GREEN}Slack MCP${NC} — send messages and read channels"
-  if mcp_exists_global "slack"; then
+  if mcp_installed "slack"; then
     echo -e "     ${GREEN}[already installed]${NC}"
     MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
   else
     echo -n "     Install? (y/n): "
     read -r ans
     if is_yes "$ans"; then
-      add_mcp_global "slack" "http" "https://mcp.slack.com/mcp"
+      claude mcp add --transport http -s user slack https://mcp.slack.com/mcp 2>&1 | sed 's/^/     /'
       echo -e "     ${GREEN}[installed — authenticate in Claude on first use]${NC}"
       MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
     else
