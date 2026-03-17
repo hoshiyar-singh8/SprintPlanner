@@ -176,6 +176,41 @@ def validate(file_path):
                 f"Dependency cycle detected involving: {', '.join(cycle_nodes)}"
             )
 
+    # Check for long dependency chains (signals horizontal slicing)
+    if task_ids and not errors:
+        # Compute longest path using topological order
+        longest_path = {}
+        topo_order = []
+        temp_deg = {tid: 0 for tid in task_ids}
+        for i, task in enumerate(tasks):
+            if not isinstance(task, dict):
+                continue
+            for dep in (task.get("depends_on") or []):
+                if dep in temp_deg:
+                    temp_deg[task.get("id", "")] = (
+                        temp_deg.get(task.get("id", ""), 0) + 1
+                    )
+        topo_q = deque(tid for tid, d in temp_deg.items() if d == 0)
+        while topo_q:
+            node = topo_q.popleft()
+            topo_order.append(node)
+            for neighbor in adj.get(node, []):
+                temp_deg[neighbor] -= 1
+                if temp_deg[neighbor] == 0:
+                    topo_q.append(neighbor)
+
+        dist = {tid: 0 for tid in task_ids}
+        for node in topo_order:
+            for neighbor in adj.get(node, []):
+                if dist[node] + 1 > dist[neighbor]:
+                    dist[neighbor] = dist[node] + 1
+        max_chain = max(dist.values()) if dist else 0
+        if max_chain >= 5:
+            warnings.append(
+                f"Longest dependency chain is {max_chain + 1} tasks deep — "
+                f"consider vertical slices to reduce inter-task coupling"
+            )
+
     # Print results
     for w in warnings:
         print(f"WARN: {w}")

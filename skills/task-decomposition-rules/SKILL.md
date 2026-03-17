@@ -87,6 +87,7 @@ These patterns have been confirmed effective for this team:
 | Feedback UI (snackbar with action) | UI component, then presenter or router trigger |
 | Multi-state banner | ALL states in ONE task (ViewModel enum + View with update method handling all states) |
 | Config flag work | flag definition + version gating in ONE task, then feature usage as separate task |
+| Feature flag cleanup | ONE task: remove enum case + FeatureFlag extension(s) + protocol property + implementation + mock + all call sites that become dead |
 | Sourcery/mock generation work | protocol annotation, generation wiring, test adoption |
 | Multi-surface entry-action flow (any feature where Surface A triggers Surface B) | One HeroGen UI ticket per visual surface with stub action closures → one Human wiring ticket that connects CTAs, presents/dismisses, threads callbacks, and registers into parent module — see Multi-Surface Flow Pattern |
 
@@ -151,6 +152,27 @@ When writing each individual surface ticket:
 - The surface must be renderable and reviewable in isolation — a designer or QA can verify it without the other surface existing
 
 ---
+
+## Decomposition Axis: Vertical Slices, Not Horizontal
+
+**This is the #1 lesson from real HeroGen PR data.** A batch of 8 horizontal-slice PRs (iOS #35661-35668) was entirely closed and replaced by 3 vertical-slice PRs (#35660, #35708, #35778) that all merged.
+
+| Wrong: Horizontal Slices | Right: Vertical Slices |
+|--------------------------|----------------------|
+| PR 1: Deeplink extraction | PR 1: API param threading (all layers for one param) |
+| PR 2: API models | PR 2: Pure new UI component A (View + ViewModel, 0 existing files) |
+| PR 3: Mapper | PR 3: Pure new UI component B (View + ViewModel, 0 existing files) |
+| PR 4: ViewModel | PR 4: Wiring (human, last) |
+| PR 5-7: UI states (split) | |
+| PR 8: Integration | |
+| **Result: 8 interdependent PRs, all closed** | **Result: 3 independent PRs, all merged** |
+
+### Rules
+1. **Each task must be independently shippable** — it compiles and passes tests without other tasks in the batch
+2. **Use default parameter values** (`= nil`, `= null`) so existing call sites need no change
+3. **New UI components = new files only** — zero modifications to existing files (Scope 1)
+4. **Spread creation over time** — don't create 8 PRs in 14 minutes; merge one before creating the next
+5. **Minimize inter-task dependencies** — if task B requires a type from task A, consider: can A define the type AND use it?
 
 ## Task Ordering Rules
 

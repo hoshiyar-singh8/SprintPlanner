@@ -26,6 +26,7 @@ Read ALL three files before creating tasks.
 ## Workflow
 
 1. **Read all inputs** — understand phases, architecture, constraints, and **Task Granularity Guidance** from high_level_plan.md
+1b. **Apply vertical-slice decomposition** — each task must be independently shippable (compiles + tests pass without other tasks). Use default parameter values for backward compatibility. See task-decomposition-rules "Decomposition Axis" section.
 2. **Check figma_context in context_pack.yaml** — if `figma_context.status: analyzed`:
    - Extract all `new_components` and `modified_components` from each screen
    - Each new UI component from Figma = at least one `ui` layer task
