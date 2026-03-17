@@ -182,3 +182,7 @@ Read `ui_scope` from `feature_input.yaml`:
 10. **No task should be ambiguous** — if you can't define it clearly, flag it for the planner
 11. **UI tasks MUST include design_tokens** when figma_context is available — list the exact Bento token names for colors, spacing, typography, and corner radius. Never leave UI tasks without token references when Figma data exists.
 12. **Include ASCII layout in implementation_notes** for UI tasks — copy from figma_context or create from Figma analysis. This gives implementers exact layout specifications.
+13. **Mapper tasks MUST enumerate ALL fields** — list every field by name in acceptance_criteria. Do not say "map relevant fields". Reviewers reject PRs that cover a subset.
+14. **Cleanup tasks MUST include call-site removal** — removing a flag also means removing empty wrappers and their callers. List all affected files.
+15. **Keep files_to_modify ≤ 3** for Hero Gen tasks — tasks modifying 4+ existing files should be human or split further.
+16. **No "for future use" parameters** — do not include acceptance criteria that add unused parameters or stubs for future work.

@@ -28,6 +28,30 @@ What causes HeroGen to FAIL:
 - Overly split tickets (3 separate tickets for one component's states — combine them)
 - Vague acceptance criteria ("works correctly" instead of "returns nil when input is empty")
 - Missing mock/test infrastructure context
+- Incomplete field coverage in mappers/comparators (reviewer: "compare ALL values, add missing ones")
+- Wrong target branch — ticket must specify if a feature branch exists
+
+## Common Review Rework (Encode in Tickets to Prevent)
+
+From studying reviewer feedback on HeroGen PRs:
+
+### iOS Style Rules (Prevent Gemini/Reviewer Rework)
+- Parameterless builder functions MUST be computed properties, not functions (IOS-0002)
+- Never use `== true` or `== false` in comparisons or assertions (IOS-0009)
+- No redundant `return` in single-expression computed properties
+- Test factories should be nouns: `sut(...)` not `makeSUT(...)`
+- Use exact assertion values: `XCTAssertEqual(x, 32.0)` not `XCTAssertGreaterThan(x, 0)`
+
+### Android Rules (Prevent Reviewer Rework)
+- Do NOT add optional defaults (`= null`) on parameters that every call site always provides
+- Depend on API/abstraction modules, not implementation modules (`api(projects.fooApi)` not `implementation(projects.foo)`)
+- Cleanup PRs must not include unrelated diffs (import reordering, empty lines in unrelated files)
+
+### Both Platforms
+- Mapper/comparator tickets MUST list ALL fields to map — enumerate them explicitly in the ticket
+- Cleanup tickets MUST also remove empty wrapper functions and their call sites (don't leave dead code)
+- Do NOT add parameters "for future use" — add them when actually needed (YAGNI)
+- If a feature branch exists for the ticket prefix, specify it as the target branch
 
 ## Jira Configuration
 

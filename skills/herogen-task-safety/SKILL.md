@@ -26,6 +26,18 @@ Based on analysis of real HeroGen PRs — what gets MERGED vs CLOSED.
 - **Tasks requiring runtime context** — understanding navigation flow, lifecycle, DI graph
 - **Vague acceptance criteria** — "works correctly" instead of "returns nil when input is empty"
 - **Many-file modifications** — touching 5+ existing files with interrelated changes
+- **Incomplete field coverage** — mapper/comparator covers subset of fields, reviewer requests "compare ALL values" (Android #43691)
+- **Wrong base branch** — branching off `development` when a feature branch exists (Android #43611)
+- **Design QA mismatch** — UI implementation doesn't match design QA feedback, gets closed (Android #43695, #43704)
+- **Compilation errors on first push** — PRs that fail CI on first push often get closed or stale (iOS #35138, Android #43585)
+
+### Common Rework Patterns (What Reviewers Ask HeroGen to Fix)
+- **iOS style violations**: Parameterless builders should be computed properties (IOS-0002); no `== true`/`== false` (IOS-0009); no redundant `return` in single-expression properties
+- **iOS test precision**: Replace `XCTAssertGreaterThan(x, 0)` with `XCTAssertEqual(x, 32.0)` — exact values, not range checks
+- **iOS incomplete cleanup**: Removing a flag but leaving empty wrapper functions and their call sites
+- **Android unnecessary optional defaults**: Adding `= null` on parameters that every call site always provides
+- **Android unrelated diffs**: Cleanup PRs must not touch unrelated files (import reordering, empty lines)
+- **Android module dependencies**: Use `api(projects.shadowComparisonApi)` not `implementation(projects.shadowComparison)` — depend on abstractions
 
 ## Classification Decision Tree
 

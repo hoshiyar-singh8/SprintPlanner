@@ -295,6 +295,30 @@ For Android tickets, adjust:
 - Testing: JUnit + MockK instead of XCTest
 - Design tokens: Material/custom theme tokens instead of Bento tokens
 - Preview: `@Preview` composable instead of snapshot tests
+- Module dependencies: `api(projects.fooApi)` not `implementation(projects.foo)`
+
+## Platform-Specific Anti-Patterns (Include in Every Hero Gen Ticket)
+
+### iOS Anti-Patterns (Always Include for iOS Hero Gen Tickets)
+- Do NOT use functions for parameterless builders — use computed properties (IOS-0002)
+- Do NOT use `== true` or `== false` in comparisons or assertions (IOS-0009)
+- Do NOT use redundant `return` in single-expression computed properties
+- Do NOT name test factories as verbs (`makeSUT()`) — use nouns (`sut()`)
+- Do NOT use range assertions (`XCTAssertGreaterThan(x, 0)`) — use exact values (`XCTAssertEqual(x, 32.0)`)
+- Do NOT add parameters "for future use" — YAGNI
+- Do NOT leave empty wrapper functions when removing flag call sites
+
+### Android Anti-Patterns (Always Include for Android Hero Gen Tickets)
+- Do NOT add optional defaults (`= null`) on parameters that every call site always provides
+- Do NOT depend on implementation modules — use API/abstraction modules
+- Do NOT include unrelated diffs (import reordering, empty lines in other files)
+- Do NOT add parameters "for future use" — YAGNI
+
+### Mapper/Comparator Completeness Rule
+When writing tickets for mappers, comparators, or field-level transformations:
+- **Enumerate ALL fields explicitly** in the ticket description
+- Do NOT say "map relevant fields" — list every field by name
+- Reviewers consistently reject PRs that cover only a subset of fields
 
 ## Ticket Title Convention
 
@@ -315,3 +339,7 @@ For Android tickets, adjust:
 8. **Out of Scope section is mandatory** for scope-1 UI tickets
 9. **Use real file paths** from context_pack — not placeholder paths
 10. **All UI states in one ticket** — never split a component's states across tickets
+11. **Mapper tickets must enumerate ALL fields** — never say "map relevant fields", list every field by name
+12. **Cleanup tickets must include call-site removal** — removing a flag means also removing empty wrappers and their callers
+13. **Include platform-specific anti-patterns** from the sections above in every Hero Gen ticket
+14. **Specify target branch** if a feature branch exists — do not assume `development`/`main`
