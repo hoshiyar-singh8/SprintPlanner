@@ -72,6 +72,13 @@ Read ALL files before validating.
 - [ ] Hero Gen tickets have out-of-scope section (scope 1)
 - [ ] Human tickets with complex work have adequate description depth
 - [ ] Total SP is reasonable for feature scope (flag if >50 SP for a single feature)
+- [ ] Mapper/comparator tickets enumerate ALL fields (not "map relevant fields")
+- [ ] iOS Hero Gen UI tickets do NOT request unit tests for views/viewmodels
+- [ ] No Hero Gen task modifies 4+ existing files (should be human)
+- [ ] Dependency chain depth ≤ 4 (longer chains suggest horizontal slicing)
+- [ ] Each task is independently shippable (uses default param values for backward compat)
+- [ ] Cleanup tickets include wrapper function and call-site removal
+- [ ] No "for future use" parameters in acceptance criteria
 
 ## Output: validation_report.md
 

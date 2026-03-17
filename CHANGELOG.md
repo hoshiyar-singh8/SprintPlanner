@@ -2,17 +2,24 @@
 
 ## v1.2.0 (2026-03-17)
 
-### Improved (based on real HeroGen PR analysis)
-- `jira-ticket-standard` — rewritten with evidence-based ticket templates from ~40 real HeroGen PRs (merged vs closed patterns)
-- `herogen-task-safety` — Android MVVM classification rules, file-count heuristic (4+ files → human), granularity check for over-splitting
-- `pipeline-classifier` — granularity warnings, Android layer support, file-count validation
-- `pipeline-jira-writer` — three concrete ticket templates (API, UI Scope-1, Config Flag), Android formatting, platform-specific ticket structure
-- `pipeline-breakdown` — fixed over-splitting rules: all UI states in one task, config flag + version gating in one task
-- `task-decomposition-rules` — corrected multi-state view rule (combine, don't split), config flag rule (one task)
-- `pipeline-planner` — mandatory Task Granularity Guidance section to prevent breakdown over-splitting
+### Improved (based on analysis of 60+ real HeroGen PRs — diffs, reviews, closed vs merged)
+
+**Ticket Quality (from real merged vs closed patterns):**
+- `jira-ticket-standard` — rewritten with evidence-based templates, common review rework section (iOS style rules IOS-0002/0009, Android optional defaults, mapper completeness)
+- `herogen-task-safety` — Android MVVM classification, file-count heuristic, granularity check, common rework patterns, PR success metrics table, platform-specific test conventions
+- `pipeline-jira-writer` — three concrete ticket templates, platform-specific anti-patterns (iOS no UI tests, Android CODEOWNERS/TUIT/diff coverage), mapper field enumeration rule
+- `pipeline-classifier` — granularity warnings before classification, Android layer support, file-count validation
+
+**Task Decomposition (from closed batch #35661-35668 vs merged replacements #35660/35708/35778):**
+- `task-decomposition-rules` — vertical-slice decomposition rule (the #1 finding), wrong-vs-right comparison table, feature flag cleanup pattern, independently-shippable task requirement
+- `pipeline-breakdown` — vertical-slice enforcement, Android API/Impl module pattern, TODO stubs behind flags, mapper completeness rule, file count guidance
+- `pipeline-planner` — mandatory Task Granularity Guidance section
+
+**Validation:**
 - `validate_classification.py` — warns when herogen task modifies 4+ existing files
-- `validate_task_specs.py` — detects vague acceptance criteria ("works correctly", "behaves as expected"), added `cleanup` layer
+- `validate_task_specs.py` — vague acceptance criteria detection, dependency chain depth warning (5+ = horizontal slicing), `cleanup` layer added
 - `validate_plan.py` — warns when Task Granularity Guidance section is missing
+- `pipeline-validator` — 7 new quality checks (mapper completeness, iOS no-UI-tests, file count, chain depth, independent shippability, cleanup completeness, no YAGNI params)
 
 ## v1.1.0 (2026-03-17)
 
