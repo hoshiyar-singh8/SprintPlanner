@@ -263,16 +263,142 @@ def main():
     if created:
         print(f"\nCreated tickets:")
         for c in created:
-            print(f"  {c['task_id']} -> {c['jira_key']}")
+            url = f"{base_url}/browse/{c['jira_key']}"
+            print(f"  {c['task_id']} -> {c['jira_key']}  {url}")
 
     if failed:
         print(f"\nFailed tickets:", file=sys.stderr)
         for f_item in failed:
             print(f"  {f_item['task_id']}: {f_item['error']}", file=sys.stderr)
+
+    # Write push_log.md with clickable links
+    if created:
+        write_push_log(feature_dir, base_url, created, failed, tickets,
+                       sprint_id, filter_value)
+
+    # Update pipeline_state.yaml with push status
+    update_pipeline_state(feature_dir, created, failed)
+
+    if failed:
         sys.exit(1)
 
     print(f"\nPASS: All {len(created)} tickets created successfully")
     sys.exit(0)
+
+
+def write_push_log(feature_dir, base_url, created, failed, tickets,
+                   sprint_id, filter_value):
+    """Write push_log.md with links to all created tickets."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Build lookup from task_id to ticket details
+    ticket_map = {}
+    for t in tickets:
+        tid = t.get("task_id", "")
+        summary = t.get("fields", {}).get("summary", "")
+        mode = t.get("execution_mode", "")
+        sp = None
+        for key, val in t.get("fields", {}).items():
+            if key.startswith("customfield_") and isinstance(val, (int, float)):
+                sp = val
+                break
+        project = t.get("fields", {}).get("project", {}).get("key", "?")
+        ticket_map[tid] = {
+            "summary": summary, "mode": mode, "sp": sp, "project": project
+        }
+
+    total_sp = sum(
+        (ticket_map.get(c["task_id"], {}).get("sp") or 0) for c in created
+    )
+    herogen_count = sum(
+        1 for c in created
+        if ticket_map.get(c["task_id"], {}).get("mode") == "herogen"
+    )
+    human_count = len(created) - herogen_count
+    project = next(
+        (ticket_map[c["task_id"]]["project"]
+         for c in created if c["task_id"] in ticket_map), "?"
+    )
+
+    strategy = "filtered" if filter_value else "full plan"
+    sprint_str = f"Sprint {sprint_id}" if sprint_id else "Unassigned"
+
+    lines = [
+        f"# Push Log — {feature_dir.rstrip('/').split('/')[-1]}",
+        f"Pushed: {now}",
+        f"Project: {project}",
+        f"Sprint: {sprint_str}",
+        f"Strategy: {strategy}",
+        "",
+        f"## Created ({len(created)} tickets, {int(total_sp)} SP"
+        f" — {herogen_count} HeroGen, {human_count} Human)",
+        "",
+        "| # | Task ID | Jira Key | Title | SP | Type | URL |",
+        "|---|---------|----------|-------|----|------|-----|",
+    ]
+
+    for idx, c in enumerate(created, 1):
+        tid = c["task_id"]
+        jkey = c["jira_key"]
+        info = ticket_map.get(tid, {})
+        url = f"{base_url}/browse/{jkey}"
+        sp_val = int(info.get("sp") or 0) if info.get("sp") else "—"
+        mode = info.get("mode", "—")
+        summary = info.get("summary", "—")
+        lines.append(
+            f"| {idx} | {tid} | {jkey} | {summary} | {sp_val} | {mode} | "
+            f"[{jkey}]({url}) |"
+        )
+
+    if failed:
+        lines.extend([
+            "",
+            f"## Failed ({len(failed)} tickets)",
+            "",
+            "| Task ID | Error |",
+            "|---------|-------|",
+        ])
+        for f_item in failed:
+            lines.append(f"| {f_item['task_id']} | {f_item['error'][:100]} |")
+
+    lines.append("")
+
+    log_path = os.path.join(feature_dir, "push_log.md")
+    # Append if log already exists (multiple push rounds)
+    mode = "a" if os.path.exists(log_path) else "w"
+    with open(log_path, mode) as f:
+        if mode == "a":
+            f.write("\n---\n\n")
+        f.write("\n".join(lines))
+
+    print(f"\nPush log written to {log_path}")
+
+
+def update_pipeline_state(feature_dir, created, failed):
+    """Update pipeline_state.yaml with push status."""
+    state_path = os.path.join(feature_dir, "pipeline_state.yaml")
+    if not os.path.exists(state_path):
+        return
+
+    with open(state_path, "r") as f:
+        content = f.read()
+
+    status = "pushed" if not failed else "partial"
+
+    if "push_status:" in content:
+        lines = content.split("\n")
+        lines = [
+            f"push_status: {status}" if l.startswith("push_status:") else l
+            for l in lines
+        ]
+        content = "\n".join(lines)
+    else:
+        content = content.rstrip() + f"\npush_status: {status}\n"
+
+    with open(state_path, "w") as f:
+        f.write(content)
 
 
 if __name__ == "__main__":
