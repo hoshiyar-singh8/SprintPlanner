@@ -280,9 +280,16 @@ Ask for any remaining config in a single message (these can be grouped since the
 
 ### Stage 8: Push Strategy
 
-After the quality gate passes at Checkpoint 4, present push options:
+**Jira connection check (before presenting options):**
+1. **Atlassian MCP** — check if MCP tools are available. If yes, use MCP directly (preferred, no env vars needed)
+2. **Env vars** — if no MCP, check `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`
+3. **Neither** — ask user to set up, or skip
 
-> "Pipeline complete! How would you like to push tickets to Jira?
+**Do NOT fall through to env var prompts if Atlassian MCP is connected.**
+
+After confirming connectivity, present push options:
+
+> "How would you like to push tickets to Jira?
 >
 > 1. **Full plan** — push all [N] tickets ([X] SP)
 > 2. **Sprint capacity** — fit tickets into your sprint capacity (you tell me the SP budget)
@@ -294,11 +301,12 @@ After the quality gate passes at Checkpoint 4, present push options:
 For any option (1-5):
 1. Run `plan_push_strategy.py` with the chosen strategy
 2. Show the push plan to the user
-3. Always dry-run first: `create_jira_tickets.py ... --dry-run`
-4. Confirm with user, then create tickets
+3. If using MCP: create tickets via MCP tools, collect Jira keys
+4. If using REST API: dry-run first with `create_jira_tickets.py ... --dry-run`, confirm, then create
 5. Optionally assign to a sprint (show available sprints from jira_config.yaml)
+6. After push: `push_log.md` generated with clickable Jira links
 
-Requires `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars.
+Requires either **Atlassian MCP** (preferred) or `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars.
 
 ### Completion
 Present summary:

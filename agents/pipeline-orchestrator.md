@@ -44,13 +44,14 @@ Present this to the user:
 **STOP and wait for the user's answer.**
 
 **If YES:**
-1. Check Atlassian MCP / Jira credentials availability
-   - If Atlassian MCP is connected → use it for pushing
-   - If env vars `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` are set → use REST API hooks
-   - If neither → guide user to set up credentials, **STOP and wait**
-2. Jump to Stage 8 (Push Strategy) — present the 6 push options (full plan, sprint capacity, HeroGen only, etc.)
+1. Check Jira connectivity (same order as Stage 8):
+   - **First**: check if Atlassian MCP tools are available → use MCP (preferred, no env vars needed)
+   - **Second**: check `printenv JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` → use REST API hooks
+   - **Neither**: guide user to set up, **STOP and wait**
+2. Jump to Stage 8 (Push Strategy) — present the 6 push options
 3. Dry-run first, confirm with user, then push tickets one by one
-4. After pushing, update `pipeline_state.yaml` with `push_status: pushed`
+4. After pushing, `push_log.md` is generated with clickable Jira links
+5. `pipeline_state.yaml` updated with `push_status: pushed`
 
 **If NO:**
 - Say "OK, starting a new pipeline. Your previous artifacts are saved in `.ai/features/[feature-name]/` — you can push them anytime."
@@ -390,9 +391,28 @@ stages:
 
 ## Stage 8: Push Strategy
 
-After the quality gate passes at Checkpoint 4, present the push strategy options:
+### Jira Connection Check (before presenting options)
 
-> "Pipeline complete! How would you like to push tickets to Jira?
+**Check for Jira connectivity in this order:**
+
+1. **Atlassian MCP** — check if Atlassian MCP tools are available in this session. If yes, use MCP to create tickets directly (no env vars needed). Say: "Atlassian MCP is connected — I'll use it to push tickets."
+
+2. **Environment variables** — if Atlassian MCP is not available, check `printenv JIRA_BASE_URL`, `printenv JIRA_EMAIL`, `printenv JIRA_API_TOKEN`. If all set, use REST API hooks.
+
+3. **Neither available** — ask the user:
+   > "I need Jira access to push tickets. You have two options:
+   > 1. **Atlassian MCP** — already installed but may need a session restart
+   > 2. **Env vars** — set `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` in your terminal
+   >
+   > Or type **skip** to save tickets for later."
+
+**Do NOT fall through to env var prompts if Atlassian MCP is connected.** Always prefer MCP.
+
+### Push Options
+
+After confirming Jira connectivity, present the push strategy options:
+
+> "How would you like to push tickets to Jira?
 >
 > 1. **Full plan** — push all [N] tickets ([X] SP)
 > 2. **Sprint capacity** — I'll fit tickets into your sprint capacity (you tell me the SP budget)
@@ -402,8 +422,8 @@ After the quality gate passes at Checkpoint 4, present the push strategy options
 > 6. **Skip** — save everything for later"
 
 ### Option 1: Full Plan
-- Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --dry-run`
-- Confirm with user, then: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir>`
+- If using Atlassian MCP: create tickets one by one via MCP tools, collecting the Jira key for each
+- If using REST API: Run `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --dry-run`, confirm, then run without --dry-run
 
 ### Option 2: Sprint Capacity
 1. Ask: "What's your sprint capacity in SP?"
@@ -462,7 +482,7 @@ For any push option, if the user wants sprint assignment:
 - Sprint assignment (if any)
 - Then ask: "Create these tickets? (yes/no)"
 
-Requires `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars.
+Requires either **Atlassian MCP** (preferred) or `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars.
 
 ## Completion Output
 
