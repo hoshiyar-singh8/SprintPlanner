@@ -1,0 +1,235 @@
+tasks:
+  # Phase 1: Foundation
+  - id: TASK-001
+    title: "Add isSubscriptionV3MspEnabled config flag to Configuration protocol"
+    layer: config
+    sp: 1
+    phase: 1
+    requirement_ids: [R2]
+    depends_on: []
+    acceptance_criteria:
+      - "isSubscriptionV3MspEnabled property added to Configuration protocol"
+      - "Default value is false"
+      - "S3 config key mapped to flag in ConfigurationProvider"
+      - "Flag follows isPartnershipsPlanEnabled pattern"
+    files_to_create: []
+    files_to_modify:
+      - path: "pd-mob-config-ios/Sources/Configuration/Configuration.swift"
+        description: "Add isSubscriptionV3MspEnabled property to protocol"
+      - path: "pd-mob-config-ios/Sources/Configuration/ConfigurationProvider.swift"
+        description: "Add S3 key mapping for new flag"
+    implementation_notes: "Follow isPartnershipsPlanEnabled pattern. S3 key: subscription-v3-msp-enabled. Map in same section as other subscription flags."
+    reference_file: "pd-mob-config-ios/Sources/Configuration/Configuration.swift"
+    testing_notes: "Verify flag defaults to false. Verify S3 mapping resolves correctly."
+    execution_mode:
+      type: herogen
+      rationale: "Simple config flag addition following existing isPartnershipsPlanEnabled pattern. 2 files modified, both adding a single property."
+      confidence: high
+      risks: []
+
+  - id: TASK-002
+    title: "Update SubscriptionClient.fetchDetails() with isSubscriptionV3MspEnabled OR logic for MSP source"
+    layer: api
+    sp: 1
+    phase: 1
+    requirement_ids: [R2]
+    depends_on: [TASK-001]
+    acceptance_criteria:
+      - "SubscriptionClient.fetchDetails() checks isSubscriptionV3MspEnabled || isPartnershipsPlanEnabled for .manageSubscriptionPage source"
+      - ".general and .cashbackBanner sources unchanged (still only isPartnershipsPlanEnabled)"
+      - "Compiles without errors"
+      - "Existing routing tests still pass"
+    files_to_create: []
+    files_to_modify:
+      - path: "Subscription/Source/Api/Subscription/SubscriptionClient.swift"
+        description: "Add OR condition for MSP source routing"
+    implementation_notes: "In fetchDetails() switch on source, for .manageSubscriptionPage case: let useV3 = configuration.isSubscriptionV3MspEnabled || configuration.isPartnershipsPlanEnabled. Other cases stay unchanged."
+    reference_file: "Subscription/Source/Api/Subscription/SubscriptionClient.swift"
+    testing_notes: "Verify MSP routes to v3 when new flag is true. Verify MSP routes to v3 when partnership flag is true. Verify MSP routes to v6 when both flags are false."
+    execution_mode:
+      type: herogen
+      rationale: "Single condition change in one file. Adding || isSubscriptionV3MspEnabled to existing if-statement. Pattern identical to existing flag check."
+      confidence: high
+      risks: []
+
+  # Phase 2: Core
+  - id: TASK-003
+    title: "Update PaymentMethodViewModelMapper to handle paymentToken nil + message present state"
+    layer: mapper
+    sp: 2
+    phase: 2
+    requirement_ids: [R1]
+    depends_on: []
+    acceptance_criteria:
+      - "New else-if branch: when paymentToken == nil AND message != nil, return .addPayment state"
+      - "Maps message.title to addPaymentView title"
+      - "Maps message.description to addPaymentView description"
+      - "Maps message.status to addPaymentView warning style"
+      - "Maps message.action.title to addPaymentView CTA button title"
+      - "Maps message.action.type to addPaymentView CTA action (UPDATE_SUBSCRIPTION_PAYMENT_METHOD)"
+      - "Existing paymentToken != nil path unchanged"
+      - "Existing paymentToken == nil + message == nil path returns nil (unchanged)"
+      - "Unit test with JSON fixture for paymentToken nil + message present"
+    files_to_create: []
+    files_to_modify:
+      - path: "Subscription/Source/Mapper/SubscriptionV6/PaymentMethodViewModelMapper.swift"
+        description: "Add else-if branch for add-payment warning state"
+    implementation_notes: "Follow renewal-failed pattern from SubscriptionV6RenewalFailed.json fixture. The payment_method.message structure is identical. Map all fields: amount, amount_format, message.title, message.description, message.status, message.action.title, message.action.type."
+    reference_file: "Subscription/Source/Mapper/SubscriptionV6/PaymentMethodViewModelMapper.swift"
+    testing_notes: "Create JSON fixture SubscriptionV6PartnershipNoPayment.json. Test mapper returns .addPayment state. Test existing states still work."
+    execution_mode:
+      type: human
+      rationale: "Mapper change requires understanding multiple PaymentMethod states and how AddPaymentView renders. Cross-references renewal-failed pattern. Needs judgment on field mapping completeness."
+      confidence: high
+      risks:
+        - "May require changes to AddPaymentView if it doesn't accept all mapped fields"
+        - "Renewal-failed pattern may differ from add-payment pattern in edge cases"
+
+  # Phase 3: Verification
+  - id: TASK-004
+    title: "Verify UPDATE_RESUB action routing triggers updateMVT flow"
+    layer: test
+    sp: 1
+    phase: 3
+    requirement_ids: [R3]
+    depends_on: []
+    acceptance_criteria:
+      - "Confirmed: SubscriptionActionType.updateResub exists in PaymentDetailView.swift"
+      - "Confirmed: PlanAndPaymentPresenterV2 handles UPDATE_RESUB action and routes to plan selection"
+      - "Confirmed: No partnership guard blocks the routing"
+      - "Documentation: list the exact code path from action type to plan selection screen"
+    files_to_create: []
+    files_to_modify: []
+    implementation_notes: "Read PlanAndPaymentPresenterV2.swift and trace the UPDATE_RESUB handling. Check SubscribedActionDelegate.handle() for any guards. Document the routing chain."
+    reference_file: "Subscription/Source/Views/PlanAndPayment/PlanAndPaymentPresenterV2.swift"
+    testing_notes: "Code review only — no code changes expected unless gap found."
+    execution_mode:
+      type: human
+      rationale: "Investigation task requiring judgment — tracing action routing through presenter, delegates, and navigation stack."
+      confidence: high
+      risks: []
+
+  - id: TASK-005
+    title: "Investigate price strikethrough mechanism for DynamicStringRawObject"
+    layer: test
+    sp: 1
+    phase: 3
+    requirement_ids: [R4]
+    depends_on: []
+    acceptance_criteria:
+      - "Documented: DynamicStringRawObject struct fields (text, placeholders only)"
+      - "Documented: InfoDetailRowViewV2.oldPrice property capabilities"
+      - "Documented: Whether WTI can resolve strikethrough formatting"
+      - "Recommendation: which of the 3 approaches (WTI-resolved, new placeholder type, new field) is feasible"
+    files_to_create: []
+    files_to_modify: []
+    implementation_notes: "Read DynamicStringRawObject.swift and InfoDetailRowViewV2.swift. Check if oldPrice is populated by any current mapper. Document findings for BE alignment discussion."
+    reference_file: "Subscription/Source/Component/DynamicFormatter/Models/DynamicStringRawObject.swift"
+    testing_notes: "Investigation only — document findings."
+    execution_mode:
+      type: human
+      rationale: "Investigation task requiring judgment — evaluating 3 possible approaches for strikethrough and making recommendation."
+      confidence: high
+      risks: []
+
+  - id: TASK-006
+    title: "Verify UpdatePM page exists in pd-mob-subscription-ios"
+    layer: test
+    sp: 1
+    phase: 3
+    requirement_ids: [R5]
+    depends_on: []
+    acceptance_criteria:
+      - "Confirmed or denied: dedicated Update Payment Method page exists"
+      - "If exists: document the page class name, entry point, and how to route to it"
+      - "If not exists: document what needs to be built and estimate SP"
+      - "Documented: SubscriptionCheckoutResource.updatePaymentMethod() endpoint works for standalone PM update"
+    files_to_create: []
+    files_to_modify: []
+    implementation_notes: "Search for UpdatePaymentMethod, UpdatePM, or similar in Subscription/Source/Views/. Check PlanAndPaymentRouter for PM-specific navigation. Verify SubscriptionCheckoutResource.updatePaymentMethod() handles standalone PM addition."
+    reference_file: "pd-mob-b2c-ios/FoodPanda/Subscription/PaymentIntegration/SubscriptionCheckoutResource.swift"
+    testing_notes: "Investigation only — document findings."
+    execution_mode:
+      type: human
+      rationale: "Investigation task requiring judgment — searching for UpdatePM page across the SDK and documenting routing."
+      confidence: high
+      risks: []
+
+  - id: TASK-007
+    title: "Verify action=addPayment deeplink registration"
+    layer: test
+    sp: 1
+    phase: 3
+    requirement_ids: [R6]
+    depends_on: []
+    acceptance_criteria:
+      - "Confirmed or denied: action=addPayment is registered in deeplink handler"
+      - "If registered: document the handler class and routing destination"
+      - "If not registered: document the registration needed and estimate SP"
+      - "Documented: how UPDATE_SUBSCRIPTION_PAYMENT_METHOD action routes from message CTA"
+    files_to_create: []
+    files_to_modify: []
+    implementation_notes: "Check DeepLinkRoute enum for addPayment or updatePaymentMethod patterns. Check SubscriptionDeeplinkHandler or equivalent for action parameter handling."
+    reference_file: "Subscription/Source/Views/Details/Views/PaymentView/PaymentDetailView.swift"
+    testing_notes: "Investigation only — document findings."
+    execution_mode:
+      type: human
+      rationale: "Investigation task requiring judgment — tracing deeplink registration and action routing."
+      confidence: high
+      risks: []
+
+  # Phase 4: Testing
+  - id: TASK-008
+    title: "Unit tests for isSubscriptionV3MspEnabled flag and OR routing logic"
+    layer: test
+    sp: 1
+    phase: 4
+    requirement_ids: [R7]
+    depends_on: [TASK-001, TASK-002]
+    acceptance_criteria:
+      - "Test: MSP source routes to v3 when isSubscriptionV3MspEnabled = true, isPartnershipsPlanEnabled = false"
+      - "Test: MSP source routes to v3 when isSubscriptionV3MspEnabled = false, isPartnershipsPlanEnabled = true"
+      - "Test: MSP source routes to v3 when both flags true"
+      - "Test: MSP source routes to v6 when both flags false"
+      - "Test: .general source still only uses isPartnershipsPlanEnabled (not affected by new flag)"
+      - "Test: .cashbackBanner source still only uses isPartnershipsPlanEnabled (not affected by new flag)"
+    files_to_create:
+      - path: "Subscription/Tests/Api/SubscriptionClientV3MspRoutingTests.swift"
+        description: "Unit tests for new flag + OR routing logic"
+    files_to_modify: []
+    implementation_notes: "Follow existing SubscriptionClient test patterns. Mock Configuration with both flag combinations. Verify endpoint URL matches expected v3 or v6 path."
+    reference_file: "Subscription/Source/Api/Subscription/SubscriptionClient.swift"
+    testing_notes: "6 test cases covering all flag combinations for all 3 sources."
+    execution_mode:
+      type: herogen
+      rationale: "Straightforward unit test creation following existing test patterns. 6 test cases with clear expected outcomes. 1 new file."
+      confidence: high
+      risks: []
+
+  # Phase 2 continued: Mapper test
+  - id: TASK-009
+    title: "Add JSON fixture and unit test for PaymentMethodViewModelMapper add-payment state"
+    layer: test
+    sp: 1
+    phase: 2
+    requirement_ids: [R1]
+    depends_on: [TASK-003]
+    acceptance_criteria:
+      - "JSON fixture SubscriptionV6PartnershipNoPayment.json created with payment_method having no payment_token but message present"
+      - "Test: mapper returns .addPayment state when paymentToken nil + message present"
+      - "Test: mapper returns .paymentMethod state when paymentToken present (regression)"
+      - "Test: mapper returns nil when paymentToken nil + message nil (regression)"
+    files_to_create:
+      - path: "Subscription/Tests/Fixtures/SubscriptionV6PartnershipNoPayment.json"
+        description: "JSON fixture for partnership user with no payment method but add-payment message"
+      - path: "Subscription/Tests/Mapper/PaymentMethodViewModelMapperPartnershipTests.swift"
+        description: "Unit tests for add-payment warning state mapping"
+    files_to_modify: []
+    implementation_notes: "Base fixture on SubscriptionV6RenewalFailed.json but with no payment_token and partnership-specific message fields."
+    reference_file: "Subscription/Source/Mapper/SubscriptionV6/PaymentMethodViewModelMapper.swift"
+    testing_notes: "3 test cases: add-payment state, existing payment state, nil state."
+    execution_mode:
+      type: herogen
+      rationale: "JSON fixture creation + unit tests following existing fixture pattern. 2 new files, no modification of existing files."
+      confidence: high
+      risks: []

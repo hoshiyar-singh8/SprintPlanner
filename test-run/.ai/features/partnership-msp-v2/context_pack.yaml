@@ -1,0 +1,64 @@
+architecture:
+  pattern: viper
+  di_framework: Swinject
+  networking: URLSession
+  ui_framework: UIKit
+  testing: XCTest + Swift Testing
+  concurrency: async/await
+
+relevant_modules:
+  - name: Subscription
+    path: Subscription/Source/
+    similarity: high
+  - name: SubscriptionViews
+    path: Subscription/Source/Views/
+    similarity: high
+  - name: SubscriptionMappers
+    path: Subscription/Source/Mapper/SubscriptionV6/
+    similarity: high
+  - name: SubscriptionApi
+    path: Subscription/Source/Api/
+    similarity: high
+  - name: Configuration
+    path: pd-mob-config-ios/Sources/Configuration/
+    similarity: medium
+
+key_files:
+  - path: Subscription/Source/Mapper/SubscriptionV6/PaymentMethodViewModelMapper.swift
+    role: Maps API payment_method to PaymentMethodViewModel. Current gap - does not handle paymentToken == nil + message != nil.
+  - path: Subscription/Source/Mapper/SubscriptionV6/PlanInformationViewModelMapper.swift
+    role: Maps API plan info to PlanInformationViewModel. Handles updateMVT action type for editability.
+  - path: Subscription/Source/Api/Subscription/SubscriptionClient.swift
+    role: Fetches subscription details. Routes MSP/general/cashbackBanner sources to v6 or v3 based on isPartnershipsPlanEnabled flag.
+  - path: Subscription/Source/Api/Models/SubscriptionV6/SubscriptionApiModel.swift
+    role: Top-level API response model with message, plan, payment_method, can_unsubscribe fields.
+  - path: Subscription/Source/Views/Details/DetailsViewControllerV2.swift
+    role: MSP page view controller. Shows ProCard, Message, Savings, Benefits, ManageSub CTA. Hides PlanInfo/Payment/Unsubscribe.
+  - path: Subscription/Source/Views/PlanAndPayment/PlanAndPaymentViewControllerV2.swift
+    role: MPP page view controller. Shows Message, PlanInfo, PaymentDetail, BillingAddress, Unsubscribe.
+  - path: Subscription/Source/Views/Details/Views/PaymentView/PaymentDetailView.swift
+    role: Payment detail view. Contains SubscriptionActionType enum with UPDATE_RESUB, UPDATE_MVT, UPDATE_SUBSCRIPTION_PAYMENT_METHOD etc.
+  - path: Subscription/Source/Shared/Views/AddPaymentView/AddPaymentView.swift
+    role: Add payment warning view component. Already exists with translations.
+  - path: Subscription/Source/Component/DynamicFormatter/Models/DynamicStringRawObject.swift
+    role: Dynamic string model with text + placeholders. No style or original_text fields.
+  - path: pd-mob-b2c-ios/FoodPanda/Subscription/PaymentIntegration/SubscriptionCheckoutResource.swift
+    role: Checkout resource with updatePaymentMethod() - PUT v3/subscription/{code}/payment-method.
+  - path: Subscription/Source/Views/Details/DetailsPresenterV2.swift
+    role: MSP presenter. Orchestrates data fetch, mapping, and view updates.
+  - path: Subscription/Source/Views/PlanAndPayment/PlanAndPaymentPresenterV2.swift
+    role: MPP presenter. Handles message actions, plan changes, unsubscribe.
+
+conventions:
+  naming: Swift API guidelines, PascalCase types, camelCase properties
+  json_keys: snake_case with CodingKeys mapping
+  testing: XCTest with invocation-pattern mocks, JSON fixture files in Tests/
+  ui: Bento UI kit components
+  line_length: 120
+  indent: 2 spaces
+
+figma_context:
+  status: provided
+  urls:
+    - "https://www.figma.com/design/22irOyEYeKOvnx9pD9WOOA/Mission-Klarna-PRO-Partnership?node-id=67-58717&m=dev"
+  notes: "UpdateMVT / Select Renewal Plan screens. No specific frames for add-payment warning state."

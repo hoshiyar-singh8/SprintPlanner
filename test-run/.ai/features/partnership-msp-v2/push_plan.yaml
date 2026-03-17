@@ -1,0 +1,31 @@
+push_strategy:
+  strategy: sprint_capacity
+  total_tasks: 4
+  total_sp: 5
+  herogen_count: 3
+  human_count: 1
+  capacity: 5
+  remaining_capacity: 0
+tasks_to_push:
+- id: TASK-001
+  title: Add isSubscriptionV3MspEnabled config flag to Configuration protocol
+  layer: config
+  sp: 1
+  execution_mode: herogen
+- id: TASK-002
+  title: Update SubscriptionClient.fetchDetails() with isSubscriptionV3MspEnabled
+    OR logic for MSP source
+  layer: api
+  sp: 1
+  execution_mode: herogen
+- id: TASK-008
+  title: Unit tests for isSubscriptionV3MspEnabled flag and OR routing logic
+  layer: test
+  sp: 1
+  execution_mode: herogen
+- id: TASK-003
+  title: Update PaymentMethodViewModelMapper to handle paymentToken nil + message
+    present state
+  layer: mapper
+  sp: 2
+  execution_mode: human

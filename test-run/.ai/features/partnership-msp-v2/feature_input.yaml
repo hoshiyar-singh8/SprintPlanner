@@ -1,0 +1,14 @@
+feature_name: partnership-msp-v2
+detected_platform: ios
+repo_source: local
+repo_path: /Users/hoshiyar.singh/Documents/Project/OpenB2C
+repo_url: null
+rfc_path: /Users/hoshiyar.singh/Documents/Project/OpenB2C/docs/RFC-Partnership-MSP-ManageSubscription-v2.md
+figma_urls:
+  - "https://www.figma.com/design/22irOyEYeKOvnx9pD9WOOA/Mission-Klarna-PRO-Partnership?node-id=67-58717&m=dev"
+figma_status: provided
+sp_max: 3
+ui_scope: 1
+jira_config_status: manual
+skills_status: ready
+output_dir: /tmp/SprintPlanner/test-run/.ai/features/partnership-msp-v2
