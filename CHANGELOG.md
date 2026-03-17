@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.4.7 (2026-03-17)
+
+### Changed: Global MCP Setup
+
+- MCPs now install directly into `~/.claude.json` at the global level — **works across all Claude accounts**
+- Switched to remote HTTP MCPs (no npx, no API tokens needed at install time)
+  - Figma MCP → `https://mcp.figma.com/mcp`
+  - Atlassian MCP → `https://mcp.atlassian.com/v1/mcp`
+  - Slack MCP → `https://mcp.slack.com/mcp` (new)
+- Auth happens via OAuth on first use inside Claude — no credentials in install script
+- Replaced GitHub npx MCP (PAT-based) with simpler remote MCPs
+
 ## v1.4.6 (2026-03-17)
 
 ### Added: Push Log with Clickable Jira Links
