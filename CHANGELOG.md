@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.3.2 (2026-03-17)
+
+### Improved: New User Onboarding
+
+**MCP Dependency Handling:**
+- `install.sh` — checks for GitHub MCP and Figma MCP at install time, shows install commands if missing
+- `pipeline-orchestrator` — MCP health check before Stage 0: detects missing MCPs, guides user to install or switch to alternatives
+- `pipeline-orchestrator` — MCP fallback chain: GitHub MCP → `gh` CLI → local path; Figma MCP → manual specs → skip
+- `README.md` — added optional MCP prerequisites table with install commands
+
+**Stuck-Pipeline Recovery:**
+- `pipeline-orchestrator` — rules 11-12: always explain what failed and why, offer concrete next steps, never silently hang
+- `run-pipeline` SKILL.md — added MCP health check section, updated error handling with fallback chains
+
+**Other:**
+- `install.sh` — fixed VERSION (was stale at 1.1.0, now 1.3.2)
+- `run-pipeline` SKILL.md — updated Stage 8 push strategy to match orchestrator (6 options, not 3)
+
 ## v1.3.1 (2026-03-17)
 
 ### Fixed (from pipeline test run with real RFC)

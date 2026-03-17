@@ -1,6 +1,6 @@
 # SprintPlanner
 
-[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.3.1**
+[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.3.2**
 
 An AI-powered sprint planning pipeline for Claude Code. Works with **any codebase** — iOS, Android, Web, Backend, Flutter, or anything else. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
 
@@ -42,6 +42,15 @@ Every artifact is validated automatically:
 
 - [Claude Code](https://claude.ai/code) installed
 - Python 3 with PyYAML (`pip3 install pyyaml`)
+
+**Optional MCP servers** (the installer checks for these):
+
+| MCP | When needed | Install |
+|-----|------------|---------|
+| GitHub MCP | Scanning remote repos without cloning | `claude mcp add github -- npx -y @anthropic-ai/github-mcp` |
+| Figma MCP | Analyzing Figma designs | `claude mcp add figma -- npx -y @anthropic-ai/figma-mcp` |
+
+These are only needed if you use GitHub URLs or Figma URLs. For local repos without Figma, no MCPs are required.
 
 ### Install
 

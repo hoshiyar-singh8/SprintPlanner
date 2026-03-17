@@ -31,6 +31,31 @@ Stage 7: Quality Gate → validation_report.md → ★ CHECKPOINT 4
 2. Check for existing `pipeline_state.yaml` in the feature directory — if found, resume
 3. If fresh start, begin Stage 0
 
+## MCP Health Check (before Stage 0)
+
+Before starting intake, detect which MCP servers are available. This determines what the pipeline can do:
+
+**GitHub MCP** — needed only if the user provides a GitHub repo URL (not needed for local repos):
+- Try listing MCP tools. If `get_repository_content` or `search_code` tools are unavailable:
+  - Tell user: "GitHub MCP is not installed. You can either:
+    1. Install it: `claude mcp add github -- npx -y @anthropic-ai/github-mcp`
+    2. Provide a local path to a cloned repo instead"
+  - If user chose GitHub source, block until MCP is installed or they switch to local path
+
+**Figma MCP** — needed only if the user provides Figma URLs:
+- Try listing MCP tools. If `get_design_context` or `get_metadata` tools are unavailable:
+  - Tell user: "Figma MCP is not installed. You can either:
+    1. Install it: `claude mcp add figma -- npx -y @anthropic-ai/figma-mcp`
+    2. Skip Figma analysis and provide design specs manually"
+  - If user provided Figma URLs, warn that designs will be skipped unless MCP is installed
+
+Store MCP availability in feature_input.yaml:
+```yaml
+mcp_status:
+  github: available | unavailable | not_needed
+  figma: available | unavailable | not_needed
+```
+
 ## Stage Execution Pattern
 
 For each stage:
@@ -384,3 +409,8 @@ Next steps:
 8. **Pass retry_memory to agents on retry** — prevents repeating the same mistake
 9. **Escalate gracefully** — if something fails, explain what and why, don't just error
 10. **Use GitHub MCP for remote repos** — don't ask user to clone if they gave a URL
+11. **Guide users when stuck** — if a stage fails, MCP is missing, or validation keeps failing:
+    - Explain WHAT failed and WHY in plain language
+    - Offer concrete next steps (install MCP, fix input, switch to local path, skip optional step)
+    - Never silently hang — if waiting for an MCP tool that doesn't exist, detect it and offer alternatives
+12. **MCP fallback chain** — GitHub: try MCP → fall back to `gh` CLI → ask for local path. Figma: try MCP → ask user for manual design specs → proceed without designs

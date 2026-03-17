@@ -37,6 +37,16 @@ All arguments are optional — if not provided, you'll ask for them.
 2. Check if a `pipeline_state.yaml` exists for this feature (resume support)
 3. If resuming, skip completed stages and pick up where we left off
 
+### MCP Health Check
+Before starting Stage 0, check which MCP servers are available:
+
+- **GitHub MCP** — needed for scanning remote repos. If user gives a GitHub URL and MCP is missing, guide them:
+  `claude mcp add github -- npx -y @anthropic-ai/github-mcp`
+  Or suggest switching to a local clone.
+- **Figma MCP** — needed for design analysis. If user provides Figma URLs and MCP is missing, guide them:
+  `claude mcp add figma -- npx -y @anthropic-ai/figma-mcp`
+  Or proceed without Figma and note UI tasks will be approximate.
+
 ### Stage 0: Intake
 
 **Step 0a — Codebase Source (MANDATORY FIRST QUESTION)**
@@ -201,36 +211,43 @@ Collect:
 5. If all checks pass, mark pipeline as complete
 6. If checks fail, identify which stage to retry
 
-### Optional: Push to Jira
+### Stage 8: Push Strategy
 
-After the quality gate passes, offer:
-> "Want me to push these tickets to Jira?
-> 1. **Yes** — create all tickets now
-> 2. **Dry run** — preview without creating
-> 3. **Skip** — save for later"
+After the quality gate passes at Checkpoint 4, present push options:
 
-If yes/dry-run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> [--dry-run]`
+> "Pipeline complete! How would you like to push tickets to Jira?
+>
+> 1. **Full plan** — push all [N] tickets ([X] SP)
+> 2. **Sprint capacity** — fit tickets into your sprint capacity (you tell me the SP budget)
+> 3. **HeroGen only** — push only bot-safe tickets + their dependencies
+> 4. **Human only** — push only human-required tickets + their dependencies
+> 5. **Cherry-pick** — you choose specific task IDs
+> 6. **Skip** — save everything for later"
+
+For any option (1-5):
+1. Run `plan_push_strategy.py` with the chosen strategy
+2. Show the push plan to the user
+3. Always dry-run first: `create_jira_tickets.py ... --dry-run`
+4. Confirm with user, then create tickets
+5. Optionally assign to a sprint (show available sprints from jira_config.yaml)
+
+Requires `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars.
 
 ### Completion
 Present summary:
 ```
 Pipeline Complete — [Feature Name]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Platform: [detected_platform]
+Skills: [ready | generated | user_supplied]
 Artifacts: .ai/features/<feature-name>/
   ✅ feature_input.yaml
   ✅ clarifications.md
   ✅ context_pack.yaml
   ✅ high_level_plan.md
   ✅ task_specs.yaml (N tasks, X total SP)
-  ✅ jira_tickets.md
-  ✅ jira_payload.json
-  ✅ validation_report.md
-
-Next steps:
-  - Review jira_tickets.md for final content
-  - Push to Jira: python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir>
-  - Or use herogen-sprint-planner for assisted ticket creation
-  - Start implementation from task_specs.yaml
+  ✅ jira_tickets.md + jira_payload.json
+  ✅ validation_report.md (P pass, W warn, F fail)
 ```
 
 ## Retry Logic
@@ -246,7 +263,9 @@ Next steps:
 - If validation fails → show specific failure, retry stage with guidance
 - If user cancels at a checkpoint → save state, can resume later with `/run-pipeline`
 - If a file path doesn't exist → ask user to correct, don't proceed with invalid paths
-- If GitHub MCP is unavailable → fall back to asking for local path
+- If GitHub MCP is unavailable → try `gh` CLI → fall back to asking for local path
+- If Figma MCP is unavailable → ask for manual design specs → proceed without Figma
+- If pipeline appears stuck → explain what stage is blocked, why, and offer concrete alternatives
 
 ## Agent Delegation
 

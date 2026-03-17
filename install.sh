@@ -4,7 +4,7 @@ set -euo pipefail
 # SprintPlanner installer — copies pipeline into ~/.claude/
 # Usage: ./install.sh [--uninstall] [--version]
 
-VERSION="1.1.0"
+VERSION="1.3.2"
 
 CLAUDE_DIR="$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -244,6 +244,27 @@ echo "  - $(ls "$SCRIPT_DIR"/skills/ | wc -l | tr -d ' ') skills"
 echo "  - $(ls "$SCRIPT_DIR"/agents/*.md | wc -l | tr -d ' ') agents"
 echo "  - $(ls "$SCRIPT_DIR"/hooks/*.py | wc -l | tr -d ' ') hooks"
 echo "  - PostToolUse validation hook"
+
+# Check optional MCP dependencies
+echo ""
+echo "Optional MCP servers (checked at runtime, not required for local repos):"
+
+# GitHub MCP — needed for remote repo scanning
+if claude mcp list 2>/dev/null | grep -qi "github"; then
+  echo -e "  ${GREEN}[installed]${NC} GitHub MCP — remote repo scanning"
+else
+  echo -e "  ${YELLOW}[not found]${NC} GitHub MCP — needed for scanning GitHub repos without cloning"
+  echo "              Install: claude mcp add github -- npx -y @anthropic-ai/github-mcp"
+fi
+
+# Figma MCP — needed for design analysis
+if claude mcp list 2>/dev/null | grep -qi "figma"; then
+  echo -e "  ${GREEN}[installed]${NC} Figma MCP — design analysis"
+else
+  echo -e "  ${YELLOW}[not found]${NC} Figma MCP — needed for analyzing Figma designs"
+  echo "              Install: claude mcp add figma -- npx -y @anthropic-ai/figma-mcp"
+fi
+
 echo ""
 echo "Usage: Open Claude Code in any project and run:"
 echo "  /run-pipeline"
