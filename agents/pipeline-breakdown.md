@@ -172,6 +172,12 @@ Read `ui_scope` from `feature_input.yaml`:
 - Scope 1: ViewModel struct + View only. files_to_modify is EMPTY.
 - Scope 2+: May include layout integration in parent view.
 
+## Tool Usage Rules
+
+- **Read YAML/MD files with the Read tool** — do NOT write inline Python scripts (`python3 -c "..."`) to parse files. This triggers security warnings.
+- **Write output with the Write tool** — do NOT use `cat <<EOF` or `echo` via Bash.
+- **Use existing hooks** in `~/.claude/hooks/` for validation — do NOT duplicate their logic with inline scripts.
+
 ## Rules
 
 1. **Every task MUST be single-layer** — never mix layers

@@ -333,6 +333,13 @@ When writing tickets for mappers, comparators, or field-level transformations:
 - Include the specific component/module name
 - Example: `[iOS] Create PartnershipVoucherBannerView — Two-State Sticky Banner`
 
+## Tool Usage Rules
+
+- **Read YAML files with the Read tool** — do NOT write inline Python scripts to parse YAML. Use `Read` to read `task_specs.yaml`, `context_pack.yaml`, etc. and work with the content directly.
+- **Use existing validation hooks** — do NOT write inline Python to validate or count tasks. The pipeline has `validate_task_specs.py`, `render_jira_payload.py`, etc. in `~/.claude/hooks/`.
+- **Use the Write tool** to create `jira_tickets.md` — do NOT use `cat <<EOF` or `echo` via Bash.
+- **Never use `python3 -c "..."` with multi-line scripts** — this triggers Claude Code security warnings about hidden arguments. If you absolutely must run Python, write a temp `.py` file first, run it, then delete it.
+
 ## Rules
 
 1. **Every task in task_specs must have a corresponding ticket** — no missing tickets

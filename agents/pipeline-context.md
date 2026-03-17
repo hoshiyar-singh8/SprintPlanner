@@ -185,6 +185,12 @@ conventions:
   mock_pattern: "[mocking approach]"
 ```
 
+## Tool Usage Rules
+
+- **Read YAML/MD files with the Read tool** — do NOT write inline Python scripts (`python3 -c "..."`) to parse files. This triggers security warnings.
+- **Write output with the Write tool** — do NOT use `cat <<EOF` or `echo` via Bash.
+- **Use existing hooks** in `~/.claude/hooks/` for validation — do NOT duplicate their logic with inline scripts.
+
 ## Rules
 
 1. **Use parallel discovery** — never read files sequentially when they're independent
