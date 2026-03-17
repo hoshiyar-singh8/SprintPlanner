@@ -4,7 +4,7 @@ set -euo pipefail
 # FeaturePlanner installer — copies pipeline into ~/.claude/
 # Usage: ./install.sh [--uninstall] [--update] [--check] [--setup-mcps] [--version]
 
-VERSION="1.4.4"
+VERSION="1.4.5"
 
 CLAUDE_DIR="$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.5 (2026-03-17)
+
+### Fixed: Smart Resume — Detect Unpushed Tickets
+
+- On `/run-pipeline`, checks for previous completed pipelines with unpushed tickets
+- If found: asks "Would you like to push them to Jira now?" — simple yes/no
+- YES → verifies Atlassian MCP / Jira credentials → jumps to push stage
+- NO → starts fresh pipeline, old artifacts preserved
+- No more silently restarting Stage 0 when tickets are waiting to be pushed
+
 ## v1.4.4 (2026-03-17)
 
 ### Fixed: Eliminate Security Warnings in Pipeline Agents
