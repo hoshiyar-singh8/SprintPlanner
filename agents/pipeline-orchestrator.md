@@ -83,11 +83,13 @@ For each stage:
 
 ## Stage Details
 
-### Stage 0: Intake
+### Stage 0: Intake (Interactive Q&A)
 
-This stage has 7 sub-steps. Do them in order.
+**CRITICAL RULE: Stage 0 is an interactive conversation. Ask ONE question at a time, then STOP and wait for the user's response before asking the next question. Never batch multiple questions. Never pre-fill answers. Never assume. The flow must feel like a natural dialogue.**
 
-**Step 0a — Codebase Source (FIRST QUESTION)**
+This stage has 7 sub-steps. Do them in order, one at a time.
+
+**Step 0a — Codebase Source (FIRST QUESTION — ask and STOP)**
 
 Ask:
 > "Where should I read the codebase from?
@@ -95,12 +97,14 @@ Ask:
 > 2. **Local path** — give me the local directory path
 > 3. **Both** — GitHub URL + local path"
 
+**STOP HERE. Wait for the user to respond before doing anything else.**
+
 Validate:
 - GitHub URL → run `gh repo view <url>` or use GitHub MCP to confirm repo exists
 - Local path → verify directory exists
 - Store `repo_source`, `repo_url`, `repo_path` in feature_input.yaml
 
-**Step 0b — Platform Detection**
+**Step 0b — Platform Detection (after user answers 0a)**
 
 Scan the repo (via GitHub MCP or local Glob) for platform signals:
 - `*.swift`, `*.xcodeproj` → iOS
@@ -109,7 +113,10 @@ Scan the repo (via GitHub MCP or local Glob) for platform signals:
 - `go.mod`, `pom.xml`, `requirements.txt`, `Gemfile` → Backend
 - `pubspec.yaml` → Flutter
 
-Present: "I detected **[platform]** — is that correct?"
+Present: "I detected **[platform]** ([evidence]). Is that correct?"
+
+**STOP HERE. Wait for the user to confirm before proceeding.**
+
 Store `detected_platform` in feature_input.yaml.
 
 **Multi-platform support**: If the user says "both iOS and Android" or provides two repos:
@@ -147,21 +154,27 @@ If skills are missing → present:
 
 Store `skills_status: ready | generated | user_supplied` in feature_input.yaml.
 
-**Step 0d — RFC/PRD**
+**Step 0d — RFC/PRD (after skills are ready)**
 
 Ask: "What's the RFC or PRD? (file path, URL, or paste content)"
+
+**STOP HERE. Wait for the user's response.**
+
 - File path → verify exists
 - URL → fetch content
 - Pasted content → save to `<feature-dir>/rfc_input.md`
 
-**Step 0e — Figma Designs**
+**Step 0e — Figma Designs (after user provides RFC)**
 
 Ask: "Do you have Figma designs? (Figma URL, 'no', or 'not yet')"
+
+**STOP HERE. Wait for the user's response.**
+
 - URL(s) → validate format, store in `figma_urls`
 - "no" → `figma_urls: []`
 - "not yet" → `figma_status: pending`, note UI tasks will be approximate
 
-**Step 0f — Jira Setup (Auto-Config)**
+**Step 0f — Jira Setup (after Figma answer)**
 
 Ask:
 > "Do you want to connect to Jira? Options:
@@ -181,21 +194,27 @@ If user skips:
 - Store `jira_config_status: manual`
 - Placeholder defaults will be used
 
-**Step 0g — Output Directory**
+**Step 0g — Output Directory (after Jira answer)**
 
-Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/` in your current directory)"
+Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/`)"
+
+**STOP HERE. Wait for the user's response.**
+
 - User can accept default (cwd-based) or provide a custom path
 - **Guard against dependency directories**: if `repo_path` contains `Carthage/Checkouts/`, `node_modules/`, `vendor/`, `Pods/`, `.build/`, default to cwd instead of repo_path
 - Store the resolved absolute path as `output_dir` in feature_input.yaml
 
-**Step 0h — Remaining Config**
+**Step 0h — Remaining Config (after output dir)**
 
-Collect (with sensible defaults):
-- Feature name (derive from RFC if not provided)
-- UI scope: 1-4 (default: 1)
-- Max SP per task: 1-3 (default: 3)
-- Epic key (if not already collected in Step 0f)
-- Labels (optional)
+Ask in a single grouped message (these have sensible defaults):
+> "A few more settings (press enter to accept defaults):
+> - **Feature name**: [derived from RFC title]
+> - **UI scope level**: 1-4 (default: 1)
+> - **Max SP per task**: 1-3 (default: 3)
+> - **Epic key**: [from Step 0f, or enter one]
+> - **Labels**: (optional, comma-separated)"
+
+**STOP HERE. Wait for the user's response.**
 
 **Step 0i — Write Artifacts**
 
@@ -239,13 +258,17 @@ Collect (with sensible defaults):
 
 ### Stage 4: Breakdown
 - Agent: `pipeline-breakdown`
-- Prompt: "Break down high_level_plan.md into task_specs.yaml in [feature_dir]."
+- Prompt: "Break down high_level_plan.md into task_specs.yaml in [feature_dir]. Use `id` (NOT `task_id`) for task identifiers."
 - Validate: `python3 ~/.claude/hooks/validate_task_specs.py <path>`
+- **WAIT for validation to pass before proceeding to Stage 5**
 
 ### Stage 5: Classification
-- Agent: `pipeline-classifier`
-- Prompt: "Classify each task in task_specs.yaml as herogen or human in [feature_dir]."
-- Validate: `python3 ~/.claude/hooks/validate_classification.py <path>`
+**CRITICAL: NEVER launch Stage 5 in parallel with Stage 4. The classifier MUST read the completed, validated task_specs.yaml. If you launch both simultaneously, the classifier will either fail or produce stale data that gets overwritten.**
+
+1. **Verify task_specs.yaml exists and passed validation** — if not, do NOT proceed
+2. Agent: `pipeline-classifier`
+3. Prompt: "Read task_specs.yaml in [feature_dir]. Add `execution_mode` with `type` (NOT `mode`) field set to `herogen` or `human` plus a `rationale` string to each task. Write the updated file back."
+4. Validate: `python3 ~/.claude/hooks/validate_classification.py <path>`
 - **★ CHECKPOINT 3**: Present classification summary
   - Show task table with ID, title, SP, layer, execution_mode
   - Show Hero Gen count vs Human count

@@ -49,22 +49,36 @@ Before starting Stage 0, check which MCP servers are available:
 - **Atlassian MCP** — enhances Jira integration. If missing, pipeline falls back to REST API hooks (fully functional). To install:
   `claude mcp add atlassian -s user -e ATLASSIAN_SITE_URL=... -e ATLASSIAN_USER_EMAIL=... -e ATLASSIAN_API_TOKEN=... -- npx -y atlassian-mcp --stdio`
 
-### Stage 0: Intake
+### Stage 0: Intake (Interactive Q&A)
 
-**Step 0a — Codebase Source (MANDATORY FIRST QUESTION)**
+**CRITICAL: Stage 0 is a conversation, not a batch job.** Ask ONE question at a time. Wait for the user's answer before asking the next question. Never pre-fill answers or skip questions. The flow should feel like a natural dialogue:
+
+```
+You: "Where's your codebase?"
+User: → answers
+You: "I detected iOS. Correct?"
+User: → confirms
+You: "What's the RFC?"
+User: → gives path
+...and so on
+```
+
+**Step 0a — Codebase Source (FIRST QUESTION — ask and STOP)**
 
 Ask the user:
 > "Where should I read the codebase from?
-> 1. **GitHub repo** — give me the repo URL (e.g., `github.com/org/repo`) and I'll use GitHub MCP to read it
+> 1. **GitHub repo** — give me the repo URL (e.g., `github.com/org/repo`)
 > 2. **Local path** — give me the local directory path
-> 3. **Both** — GitHub URL for browsing + local path for file reads"
+> 3. **Both** — GitHub URL + local path"
+
+**STOP and wait for the user's response.** Do NOT ask the next question in the same message.
 
 Based on answer:
 - If GitHub URL → validate with `gh repo view <url>` or GitHub MCP. Store as `repo_source: github`, `repo_url: <url>`, `repo_path: null`
 - If local path → verify directory exists. Store as `repo_source: local`, `repo_url: null`, `repo_path: <path>`
 - If both → store both. `repo_source: both`
 
-**Step 0b — Platform & Stack Detection**
+**Step 0b — Platform & Stack Detection (after user answers 0a)**
 
 Automatically detect the platform by scanning the repo:
 - Look for: `build.gradle`, `AndroidManifest.xml`, `*.kt`, `*.java` → **Android**
@@ -74,9 +88,11 @@ Automatically detect the platform by scanning the repo:
 - Look for: `flutter.yaml`, `pubspec.yaml` → **Flutter**
 - Look for: `*.csproj`, `*.sln` → **.NET**
 
-Present to user: "I detected **[platform]** — is that correct?"
+Present to user: "I detected **[platform]** ([evidence]). Is that correct?"
 
-**Step 0c — Skill Check**
+**STOP and wait for confirmation.**
+
+**Step 0c — Skill Check (after user confirms platform)**
 
 Check if platform-specific skills exist in `~/.claude/skills/`:
 
@@ -88,49 +104,49 @@ Check if platform-specific skills exist in `~/.claude/skills/`:
 | Backend | `backend-architecture-rules`, `backend-context-gathering` | No |
 | Flutter | `flutter-architecture-rules`, `flutter-context-gathering` | No |
 
-If required skills **exist** → proceed normally.
+If required skills **exist** → tell user "Skills found for [platform]" and proceed to next question.
 
-If required skills **DON'T exist** → present options:
+If required skills **DON'T exist** → present options and **STOP**:
 > "I don't have architecture skills for **[platform]** yet. Two options:
 >
-> **(A) Supply your own skills** — provide me with skill files that describe your architecture patterns, design system tokens, and context gathering strategy. I'll install them.
+> **(A) Supply your own skills** — give me skill files describing your architecture, design tokens, and conventions
 >
-> **(B) Let me explore** — I'll analyze your codebase, learn the architecture patterns, DI framework, design system, testing conventions, and create the skills myself. This will take a few minutes but the skills will be saved for future runs.
+> **(B) Let me explore** — I'll analyze your codebase and create the skills myself. Takes a few minutes but they're saved for future runs.
 >
 > Which do you prefer?"
 
 If user picks (A) → accept skill files, validate structure, save to `~/.claude/skills/`
-If user picks (B) → launch `pipeline-skill-generator` agent with the repo. Agent will:
-1. Explore the repo structure
-2. Identify architecture pattern (MVVM, MVI, Clean, etc.)
-3. Identify DI framework, networking, UI framework, design system, testing
-4. Create platform-specific skill files
-5. Save to `~/.claude/skills/`
-6. Report what was created
+If user picks (B) → launch `pipeline-skill-generator` agent. Wait for it to complete before asking the next question.
 
-**Step 0d — RFC/PRD**
+**Step 0d — RFC/PRD (after skills are ready)**
 
 Ask: "What's the RFC or PRD for this feature? (file path, URL, or paste the content)"
 
-**Step 0e — Figma Designs**
+**STOP and wait for the user's response.**
 
-Ask: "Do you have Figma designs for this feature? (Figma URL, or 'no' / 'not yet')"
+**Step 0e — Figma Designs (after user provides RFC)**
+
+Ask: "Do you have Figma designs for this feature? (Figma URL, 'no', or 'not yet')"
+
+**STOP and wait for the user's response.**
+
 - If yes → collect URLs, validate format
 - If no → record `figma_urls: []`, note "no designs provided"
 - If "not yet" → record `figma_status: pending`, warn that UI tasks will be approximate
 
-**Step 0f — Jira Setup (Auto-Config)**
+**Step 0f — Jira Setup (after Figma answer)**
 
 Ask: "Do you want to connect to Jira? Options:
-1. **Yes — give me the project URL** (e.g., `https://your-org.atlassian.net/projects/PROJ`) and I'll auto-detect components, fields, and priorities
-2. **Epic link** — also give me the epic URL/key if you have one (e.g., `PROJ-100` or the Jira URL)
-3. **Skip** — I'll use placeholder values and you can edit `jira_config.yaml` later"
+1. **Yes — give me the project URL** (e.g., `https://your-org.atlassian.net/projects/PROJ`) and I'll auto-detect everything
+2. **Epic link too** — project URL + epic key (e.g., `PROJ-100`)
+3. **Skip** — I'll use placeholder values, you can edit later"
+
+**STOP and wait for the user's response.**
 
 If user provides a Jira URL/key:
 - Check for Jira credentials: env vars `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`
 - If credentials not set, ask user to provide email + API token (guide them to https://id.atlassian.net/manage-profile/security/api-tokens to create one)
 - Run: `python3 ~/.claude/hooks/jira_auto_config.py --url <url> --project <key> --epic <epic_key> --email <email> --token <token> --output <feature_dir>/jira_config.yaml`
-- This auto-discovers: project key, component IDs by platform, story points field, sprint field, repository field, priorities, and sets the current user as default assignee
 - Show the user what was found: "Found project **PROJ** with components: iOS (18967), Android (18965). Story points field: customfield_10053. Assignee: Your Name."
 - Store `jira_config_status: auto` in feature_input.yaml
 
@@ -138,28 +154,34 @@ If user skips:
 - Store `jira_config_status: manual`
 - Pipeline will use placeholder defaults from `jira_config.template.yaml`
 
-**Step 0g — Output Directory**
+**Step 0g — Output Directory (after Jira answer)**
 
-Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/` in your current directory)"
-- User can accept default (cwd-based) or provide a custom path
+Ask: "Where should I save pipeline artifacts? (default: `./.ai/features/<feature-name>/`)"
+
+**STOP and wait.** User can accept default or provide a custom path.
+
 - **Never write artifacts inside a dependency checkout or vendored directory** — if repo_path looks like `Carthage/Checkouts/`, `node_modules/`, `vendor/`, `Pods/`, default to cwd instead
 - Store the chosen path as `output_dir` in feature_input.yaml
 
-**Step 0h — Remaining Config**
+**Step 0h — Remaining Config (after output dir)**
 
-Collect:
-- Feature name (derive from RFC title if not provided)
-- UI scope level: 1-4 (default: 1)
-- Max SP per task: 1-3 (default: 3)
-- Epic key (if not already collected in Step 0f)
-- Labels (optional)
+Ask for any remaining config in a single message (these can be grouped since they have sensible defaults):
+> "A few more settings (press enter to accept defaults):
+> - **Feature name**: [derived from RFC title]
+> - **UI scope level**: 1-4 (default: 1)
+> - **Max SP per task**: 1-3 (default: 3)
+> - **Epic key**: [from Step 0f, or enter one]
+> - **Labels**: (optional, comma-separated)"
+
+**STOP and wait.**
 
 **Step 0i — Write Artifacts**
 
-1. Create directory: `<output_dir>` (resolved from step 0f)
+1. Create directory: `<output_dir>` (resolved from step 0g)
 2. Write `feature_input.yaml`
 3. Run validation: `python3 ~/.claude/hooks/validate_input.py <path>`
 4. Write `pipeline_state.yaml` with stage 0 completed
+5. Show confirmation: "Intake complete. Starting Discovery..."
 
 ### Stage 1: Discovery
 1. Launch `pipeline-discovery` agent with `feature_input.yaml` path
@@ -188,15 +210,19 @@ Collect:
 1. Launch `pipeline-breakdown` agent with `high_level_plan.md` + `context_pack.yaml`
 2. Agent produces `task_specs.yaml`
 3. Run validation: `python3 ~/.claude/hooks/validate_task_specs.py <path>`
-4. Update `pipeline_state.yaml`
+4. **WAIT for validation to pass before proceeding to Stage 5**
+5. Update `pipeline_state.yaml`
 
 ### Stage 5: Classification
-1. Launch `pipeline-classifier` agent with `task_specs.yaml`
-2. Agent adds `execution_mode` to each task
-3. Run validation: `python3 ~/.claude/hooks/validate_classification.py <path>`
-4. **★ CHECKPOINT 3**: Present task list with classifications for user review
-5. If user overrides any classifications, update `task_specs.yaml`
-6. Update `pipeline_state.yaml`
+**CRITICAL: Stage 5 MUST run AFTER Stage 4 completes. NEVER launch the classifier in parallel with the breakdown agent.** The classifier reads `task_specs.yaml` which must be fully written and validated first.
+
+1. **Verify `task_specs.yaml` exists and passed validation** — if not, do NOT proceed
+2. Launch `pipeline-classifier` agent with `task_specs.yaml`
+3. Agent adds `execution_mode` to each task (reads the file, adds classification, writes it back)
+4. Run validation: `python3 ~/.claude/hooks/validate_classification.py <path>`
+5. **★ CHECKPOINT 3**: Present task list with classifications for user review
+6. If user overrides any classifications, update `task_specs.yaml`
+7. Update `pipeline_state.yaml`
 
 ### Stage 6: Jira Writing
 1. Launch `pipeline-jira-writer` agent with `task_specs.yaml` + `context_pack.yaml`
@@ -284,3 +310,32 @@ Agent(subagent_type="pipeline-validator", prompt="...")
 ```
 
 Always pass the full artifact directory path so agents can read all relevant files.
+
+## YAML Schema Contract
+
+**All agents MUST use these exact field names.** Validators will reject non-conforming fields.
+
+### task_specs.yaml — task entry fields
+```yaml
+tasks:
+  - id: "TASK-001"              # NOT task_id
+    title: "Short title"
+    description: "What to do"
+    layer: model                 # one of: model, mapper, presenter, interactor, router, view, config, test, etc.
+    sp: 1                        # 1, 2, or 3
+    phase: 1
+    depends_on: []               # list of task IDs (e.g., ["TASK-001", "TASK-002"])
+    requirement_ids: ["R1"]      # list of R-IDs from clarifications.md
+    files_to_modify: []
+    files_to_create: []
+    acceptance_criteria: []
+    reference_file: "path"
+    execution_mode:
+      type: herogen              # NOT mode. Must be "herogen" or "human"
+      rationale: "Brief reason"
+```
+
+**Common mistakes to avoid:**
+- `task_id` → use `id`
+- `execution_mode.mode` → use `execution_mode.type`
+- Running classifier before breakdown finishes → NEVER do this
