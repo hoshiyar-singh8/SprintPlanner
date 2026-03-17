@@ -28,8 +28,25 @@ Stage 7: Quality Gate → validation_report.md → ★ CHECKPOINT 4
 ## Startup
 
 1. Read `~/.claude/personal-project-config.md` for Jira config (if it exists)
-2. Check for existing `pipeline_state.yaml` in the feature directory — if found, resume
-3. If fresh start, begin Stage 0
+2. Search for existing `pipeline_state.yaml` files in `.ai/features/*/` directories
+3. If a completed pipeline is found (all stages done), offer these options **BEFORE starting a new pipeline**:
+
+> "I found a completed pipeline for **[feature-name]** ([N] tasks, [X] SP).
+>
+> 1. **Push tickets to Jira** — resume at the push stage for this feature
+> 2. **Re-run quality gate** — re-validate and review before pushing
+> 3. **Start a new pipeline** — for a different feature
+>
+> Which would you like?"
+
+**STOP and wait for the user's answer.** Do NOT start Stage 0 automatically.
+
+- If user picks 1 → jump directly to Stage 8 (Push Strategy) using the existing artifacts
+- If user picks 2 → jump to Stage 7 (Quality Gate) using the existing artifacts
+- If user picks 3 → begin a fresh Stage 0
+
+4. If a partially completed pipeline is found (some stages done), resume from the next incomplete stage
+5. If no pipeline_state.yaml exists, begin Stage 0
 
 ## MCP Health Check (FIRST STEP — before Stage 0)
 

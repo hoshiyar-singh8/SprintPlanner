@@ -34,8 +34,19 @@ All arguments are optional — if not provided, you'll ask for them.
 
 ### Before Starting
 1. Read `~/.claude/personal-project-config.md` for Jira config (if it exists)
-2. Check if a `pipeline_state.yaml` exists for this feature (resume support)
-3. If resuming, skip completed stages and pick up where we left off
+2. Search for existing `pipeline_state.yaml` files in `.ai/features/*/`
+3. **If a completed pipeline exists** (all stages done), ask the user:
+   > "I found a completed pipeline for **[feature-name]** ([N] tasks, [X] SP).
+   > 1. **Push tickets to Jira** — resume at the push stage
+   > 2. **Re-run quality gate** — re-validate before pushing
+   > 3. **Start a new pipeline** — for a different feature"
+
+   **STOP and wait.** Do NOT start Stage 0 automatically.
+   - Pick 1 → jump to Stage 8 (Push Strategy)
+   - Pick 2 → jump to Stage 7 (Quality Gate)
+   - Pick 3 → fresh Stage 0
+4. **If a partially completed pipeline exists**, resume from the next incomplete stage
+5. If no pipeline exists, begin Stage 0
 
 ### MCP Health Check (FIRST STEP — prerequisite gate)
 
