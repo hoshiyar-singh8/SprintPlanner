@@ -127,6 +127,37 @@ When creating API model structs:
 - **Nested models get their own top-level struct** — define `RenewalApiModel` as a standalone struct, then reference it as a property in `PlanPolicyApiModel`. Do not nest struct definitions inside other structs.
 - **Follow existing naming patterns** in the file — if existing models in the same file use `XxxApiModel`, follow that pattern exactly.
 
+### Backward Compatibility — Graceful Degradation
+
+All new fields added to existing Decodable structs MUST be optional. The API response without voucher data must continue to decode and render exactly as before.
+
+**Rules:**
+1. **New fields on existing structs are ALWAYS optional** (`Type?`) — never add a non-optional field to a struct that already decodes existing API responses. If `PartnershipsData` currently works without `voucher`, then `voucher: VoucherApiModel?` must be optional.
+2. **Use `decodeIfPresent`** — if the struct has a custom `init(from:)`, new fields use `decodeIfPresent`. If it uses synthesized decoding (no custom init), optional properties auto-decode with `decodeIfPresent` semantics.
+3. **New Decodable structs themselves can have non-optional fields** — `VoucherApiModel.status: String` is fine because the struct is only decoded when the `voucher` key is present. But the property ON the parent (`voucher: VoucherApiModel?`) must be optional.
+4. **Layout components are safe by default** — they parse via `[String: Any]` dictionary casting with `as?`, so missing keys return nil naturally. But still guard properly.
+5. **Test backward compat explicitly** — every task that adds new fields must include a test with a JSON payload that OMITS the new keys entirely, proving the old path doesn't crash.
+
+### SDUI Layout Components vs Data Models
+
+This codebase uses Server-Driven UI (SDUI) with two distinct JSON layers:
+
+| Layer | Path in response | Decoded via | Pattern |
+|-------|-----------------|-------------|---------|
+| **Data** | `data.data.*` | `JSONDecoder` → `PartnershipsData` (Decodable struct) | Strict — unknown fields cause decode failure if not optional |
+| **Layout** | `data.layout[]` | `AnyDecodable` → `[String: Any]` → factory method per component type | Loose — unknown components/fields silently ignored |
+
+**Data models** (e.g., `VoucherApiModel`, `PlanPolicyApiModel`):
+- Decoded via `JSONDecoder` from `JSONSerialization.data(withJSONObject:)`
+- Strict schema — every field must match or be optional
+- New fields on existing structs MUST be optional
+
+**Layout component models** (e.g., `VOUCHER_STICKY_BANNER`, `VOUCHER_BOTTOM_SHEET`):
+- Decoded via `[String: Any]` dictionary casting in factory methods
+- Each component type has a factory method in `LayoutComponentViewModelFactory+Partnerships.swift`
+- New component types need: enum case + switch case + factory method
+- Fields parsed with `data["key"] as? Type` — missing keys return nil, no crash
+
 ### CodingKeys
 
 - Always provide explicit `CodingKeys` when JSON uses snake_case and Swift uses camelCase.

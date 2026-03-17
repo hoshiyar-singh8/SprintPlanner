@@ -211,6 +211,20 @@ Read `ui_scope` from `feature_input.yaml`:
 19. **Do NOT over-qualify nested model names** — use `RenewalApiModel`, not `PlanPolicyRenewalApiModel`. The parent-child relationship is expressed via the property type (`renewal: RenewalApiModel`), not by prefixing the parent name.
 20. **Struct creation and struct wiring are SEPARATE tasks** — creating `VoucherApiModel` is one task; adding `voucher: VoucherApiModel?` to `PartnershipsData` is a different task. Never mix "define new type" with "integrate into existing type" in the same ticket.
 
+### Backward Compatibility
+
+21a. **New fields on existing Decodable structs MUST be optional** — if `PartnershipsData` currently decodes without `voucher`, then the new field must be `voucher: VoucherApiModel?` (optional). A non-optional addition will crash when the API returns old responses.
+21b. **Every wiring task MUST include a backward compat test** — a test with a JSON payload that OMITS the new keys, proving the old decode path doesn't crash.
+21c. **Layout component changes are additive** — new component types are ignored by default (factory returns nil for unknown types). But modified components (e.g., MOBILE_STICKY_FOOTER adding `original_price`) must handle the field being absent.
+
+### Layout Component Tasks (SDUI)
+
+21d. **Extract layout component contracts from RFC** — when the RFC adds new layout components (e.g., `VOUCHER_STICKY_BANNER`, `VOUCHER_BOTTOM_SHEET`) or modifies existing ones (e.g., `MOBILE_STICKY_FOOTER` adding `original_price`), create separate tasks for:
+  - Registering the new component type in `LayoutComponentsType` enum
+  - Writing the factory method that parses the component's `[String: Any]` data into a ViewModel
+  - Each factory method task must list ALL fields from the RFC layout JSON example
+21e. **Layout component fields are parsed via `data["key"] as? Type`** — not via Codable. Factory methods use dictionary casting. Missing keys return nil. Include this pattern in the task description.
+
 ### Anti-Hallucination: File Path Validation
 
 21. **Every `files_to_modify` path MUST exist in `context_pack.yaml`** — before writing task_specs.yaml, cross-check every path in `files_to_modify` against the `key_files` and `relevant_modules` paths in context_pack.yaml. If a path doesn't appear there, either:

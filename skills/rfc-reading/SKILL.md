@@ -68,9 +68,43 @@ RFCs with server-driven UI (SDUI) have TWO layers:
 
 These are DIFFERENT objects with DIFFERENT schemas. The `voucher` data object has fields like `status`, `code`, `original_price`. The `VOUCHER_STICKY_BANNER` layout component has fields like `state`, `title`, `action`. Do NOT merge them into one model.
 
-### Step 5: Output
+### Step 5: Extract layout component contracts (SDUI)
 
-Produce a `## API Contract` section in clarifications.md with the field table for each new object. This becomes the authoritative reference for the breakdown and jira-writer agents.
+For RFCs with server-driven UI, also extract the layout component changes:
+
+**New components** — list each new `component` type and ALL its fields:
+```
+VOUCHER_STICKY_BANNER:
+  - state: String ("applied" | "manual_apply")
+  - title: DynamicStringRawObject
+  - action.title: DynamicStringRawObject
+  - action.type: String ("OPEN_VOUCHER_BOTTOM_SHEET")
+```
+
+**Modified components** — list only the NEW fields being added:
+```
+MOBILE_STICKY_FOOTER (existing, modified):
+  - original_price: DynamicStringRawObject? (NEW, additive, optional)
+```
+
+Mark additive fields as optional — old responses without them must still work.
+
+### Step 6: Verify backward compatibility
+
+For every contract change, ask:
+1. Will old API responses (without the new fields) still decode without crash?
+2. Will the UI render correctly when new fields are absent?
+3. Are all new fields on existing structs optional?
+
+Flag any non-optional addition to an existing struct as a **BREAKING CHANGE**.
+
+### Step 7: Output
+
+Produce a `## API Contract` section in clarifications.md with:
+- Field table for each new data object
+- Field table for each new/modified layout component
+- Backward compatibility notes
+This becomes the authoritative reference for the breakdown and jira-writer agents.
 
 ## Gap Identification
 
