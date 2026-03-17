@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # SprintPlanner installer — copies pipeline into ~/.claude/
-# Usage: ./install.sh [--uninstall] [--version]
+# Usage: ./install.sh [--uninstall] [--update] [--check] [--setup-mcps] [--version]
 
-VERSION="1.4.0"
+VERSION="1.4.1"
 
 CLAUDE_DIR="$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -19,6 +19,48 @@ NC='\033[0m'
 if [[ "${1:-}" == "--version" || "${1:-}" == "-v" ]]; then
   echo "SprintPlanner v${VERSION}"
   exit 0
+fi
+
+# --- Check for updates ---
+if [[ "${1:-}" == "--check" ]]; then
+  cd "$SCRIPT_DIR"
+  echo "Checking for updates..."
+  git fetch origin main --quiet 2>/dev/null || { echo -e "${RED}Failed to fetch from remote.${NC}"; exit 1; }
+  LOCAL=$(git rev-parse HEAD)
+  REMOTE=$(git rev-parse origin/main)
+  if [[ "$LOCAL" == "$REMOTE" ]]; then
+    echo -e "${GREEN}You're on the latest version (v${VERSION})${NC}"
+  else
+    REMOTE_VER=$(git show origin/main:install.sh | grep '^VERSION=' | head -1 | tr -d '"' | cut -d= -f2)
+    echo -e "${YELLOW}Update available: v${VERSION} -> v${REMOTE_VER}${NC}"
+    echo "  Run: ./install.sh --update"
+  fi
+  exit 0
+fi
+
+# --- Update (git pull + reinstall) ---
+if [[ "${1:-}" == "--update" ]]; then
+  echo -e "${GREEN}Updating SprintPlanner...${NC}"
+  cd "$SCRIPT_DIR"
+  BEFORE=$VERSION
+  git pull origin main --quiet || { echo -e "${RED}Failed to pull from remote.${NC}"; exit 1; }
+  # Re-read version from the (potentially updated) install.sh
+  AFTER=$(grep '^VERSION=' "$SCRIPT_DIR/install.sh" | head -1 | tr -d '"' | cut -d= -f2)
+  if [[ "$BEFORE" == "$AFTER" ]]; then
+    echo "Already up to date (v${BEFORE})"
+  else
+    echo -e "Updated: v${BEFORE} -> v${AFTER}"
+  fi
+  echo "Reinstalling..."
+  # Run install, skipping MCP setup (MCPs are already configured)
+  SKIP_MCP_SETUP=true exec "$SCRIPT_DIR/install.sh"
+fi
+
+# --- Setup MCPs only ---
+if [[ "${1:-}" == "--setup-mcps" ]]; then
+  SKIP_MCP_SETUP=false
+  # Jump to MCP section handled below — we set a flag and fall through
+  RUN_MCP_ONLY=true
 fi
 
 # --- Uninstall ---
@@ -55,13 +97,37 @@ if [[ "${1:-}" == "--uninstall" ]]; then
     fi
   done
 
+  # Remove version tracking file
+  rm -f "$CLAUDE_DIR/.sprint-planner-version"
+  echo "  Removed version tracking file"
+
   echo -e "${YELLOW}Note: settings.json hook entry not removed (edit manually if needed).${NC}"
   echo -e "${GREEN}Uninstall complete.${NC}"
   exit 0
 fi
 
+# --- Setup MCPs only (skip install) ---
+if [[ "${RUN_MCP_ONLY:-}" == "true" ]]; then
+  echo -e "${GREEN}Running MCP setup...${NC}"
+  echo ""
+  # Jump past install section — MCP section is at the bottom
+  # We need the helpers, so skip to MCP directly below
+fi
+
 # --- Install ---
+if [[ "${RUN_MCP_ONLY:-}" != "true" ]]; then
+
 echo -e "${GREEN}Installing SprintPlanner into $CLAUDE_DIR${NC}"
+
+# Show upgrade/reinstall info
+if [[ -f "$CLAUDE_DIR/.sprint-planner-version" ]]; then
+  INSTALLED_VER=$(grep '^version=' "$CLAUDE_DIR/.sprint-planner-version" | cut -d= -f2)
+  if [[ "$INSTALLED_VER" == "$VERSION" ]]; then
+    echo -e "  Current version: v${INSTALLED_VER} (reinstalling)"
+  else
+    echo -e "  Upgrading: v${INSTALLED_VER} -> v${VERSION}"
+  fi
+fi
 echo ""
 
 # Check Python + PyYAML
@@ -245,7 +311,17 @@ echo "  - $(ls "$SCRIPT_DIR"/agents/*.md | wc -l | tr -d ' ') agents"
 echo "  - $(ls "$SCRIPT_DIR"/hooks/*.py | wc -l | tr -d ' ') hooks"
 echo "  - PostToolUse validation hook"
 
+# Write version tracking file
+cat > "$CLAUDE_DIR/.sprint-planner-version" << VEOF
+version=$VERSION
+installed_from=$SCRIPT_DIR
+installed_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+VEOF
+
+fi  # end of if [[ "${RUN_MCP_ONLY:-}" != "true" ]]
+
 # --- MCP Server Setup ---
+if [[ "${SKIP_MCP_SETUP:-}" != "true" ]]; then
 echo ""
 echo "MCP Server Setup"
 echo "━━━━━━━━━━━━━━━━"
@@ -373,8 +449,16 @@ else
   echo ""
   echo "MCP setup: ${MCPS_INSTALLED} installed, ${MCPS_SKIPPED} skipped"
   if [[ "$MCPS_SKIPPED" -gt 0 ]]; then
-    echo "  Re-run ./install.sh anytime to set up skipped MCPs."
+    echo "  Re-run ./install.sh --setup-mcps anytime to set up skipped MCPs."
   fi
+fi
+
+fi  # end of SKIP_MCP_SETUP check
+
+if [[ "${RUN_MCP_ONLY:-}" == "true" ]]; then
+  echo ""
+  echo "MCP setup complete."
+  exit 0
 fi
 
 echo ""

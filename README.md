@@ -1,6 +1,6 @@
 # SprintPlanner
 
-[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.4.0**
+[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.4.1**
 
 An AI-powered sprint planning pipeline for Claude Code. Works with **any codebase** — iOS, Android, Web, Backend, Flutter, or anything else. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
 
@@ -62,6 +62,23 @@ cd SprintPlanner
 ```
 
 This copies skills, agents, and hooks into `~/.claude/` and configures the PostToolUse validation hook.
+
+### Update
+
+```bash
+# Check if an update is available
+./install.sh --check
+
+# Pull latest and reinstall
+./install.sh --update
+```
+
+### Set up MCPs later
+
+```bash
+# Re-run MCP setup for any skipped MCPs
+./install.sh --setup-mcps
+```
 
 ### Uninstall
 

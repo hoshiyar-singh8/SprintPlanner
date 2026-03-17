@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.1 (2026-03-17)
+
+### Added: Self-Updating Upgrade Path
+
+- `./install.sh --update` — pulls latest from `origin/main` and reinstalls (skips MCP setup)
+- `./install.sh --check` — fetches remote and shows if an update is available
+- `./install.sh --setup-mcps` — runs only the MCP interactive setup (for adding skipped MCPs later)
+- Version tracking file (`~/.claude/.sprint-planner-version`) — records installed version, source path, and timestamp
+- Install now shows "Upgrading: v1.x → v1.y" or "reinstalling" when a previous version is detected
+- Uninstall now cleans up the version tracking file
+
 ## v1.4.0 (2026-03-17)
 
 ### Added: Automated MCP Installation
