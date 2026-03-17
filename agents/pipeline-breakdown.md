@@ -38,6 +38,11 @@ Read ALL three files before creating tasks.
 4. **Split each work item** into single-layer tasks using task decomposition rules
 5. **Size each task** using story point criteria (1/2/3 scale)
 6. **Auto-split any task >3 SP** or any that crosses layers
+6b. **Apply Layer Flow Grouping** — after splitting, re-merge tasks that were over-split:
+   - All Decodable structs from same API → merge into one model ticket
+   - All factory methods for same API → merge into one factory ticket
+   - Interactor + Presenter for same user flow → merge into one Human ticket
+   - Target: 5-8 tickets per feature, not 12-16. If you have >10 tickets, you're probably over-splitting.
 7. **Map dependencies** between tasks
 8. **Verify DAG** — no cycles, valid topological order
 9. **Write `task_specs.yaml`** to the feature directory
@@ -167,6 +172,10 @@ tasks:
 2. ViewModel struct + View for same component → one task
 3. Config flag + version gating → one task (they're always done together)
 4. Protocol definition + its implementation in same file → one task
+5. All Decodable structs from same API response → one task (definitions + parent wiring + enum cases + decoding tests)
+6. All layout factory methods for same API response → one task (enum registration + all factory methods + modified existing factories)
+7. Interactor method + Presenter wiring for same user flow → one task (Human) (protocol + interactor + presenter + loading)
+8. All payment changes for same checkout flow → one task (Human) (payment factory + confirm presenter + request params)
 
 ### UI Scope Enforcement
 Read `ui_scope` from `feature_input.yaml`:
@@ -181,7 +190,7 @@ Read `ui_scope` from `feature_input.yaml`:
 
 ## Rules
 
-1. **Every task MUST be single-layer** — never mix layers
+1. **Every task MUST be single-layer** — never mix layers. But single-layer does NOT mean single-component. Group all work within a layer that serves the same API response into ONE ticket (see "DO NOT Split" rules 5-8 and `task-decomposition-rules` "Layer Flow Grouping" section).
 2. **Max SP per task**: read from `feature_input.yaml` (default 3)
 3. **Prefer 1 SP tasks** — they're easier for both bots and humans
 4. **Dependencies form a valid DAG** — verify before writing
@@ -197,6 +206,8 @@ Read `ui_scope` from `feature_input.yaml`:
 14. **Cleanup tasks MUST include call-site removal** — removing a flag also means removing empty wrappers and their callers. List all affected files.
 15. **Keep files_to_modify ≤ 3** for Hero Gen tasks — tasks modifying 4+ existing files should be human or split further.
 16. **No "for future use" parameters** — do not include acceptance criteria that add unused parameters or stubs for future work.
+16b. **Check `context_pack.yaml` key_files before proposing `files_to_create`** — if a ViewModel, View, or Mock file already exists in the codebase (listed in key_files), do NOT create a new one. Use the existing type. This is critical for ViewModels — the pipeline frequently proposes creating a ViewModel that already exists.
+16c. **All DynamicStringRawObject fields in layout components must use `parseDynamicString(from:)`** — when RFC JSON shows `{ "text": "...", "placeholders": [...] }` in a layout component, the factory method must use the existing `parseDynamicString(from:)` helper, NOT parse as plain String.
 
 ### Anti-Hallucination: API Model Field Accuracy
 
@@ -209,7 +220,7 @@ Read `ui_scope` from `feature_input.yaml`:
     - If the RFC JSON shows `"original_price": 34.50` (a Double), do NOT map it as `DynamicStringRawObject` because some other field uses that type
 18. **Use `Decodable`, NOT `Codable`** for API response models — we never encode these back to JSON. Only use `Codable` when a struct is both sent and received.
 19. **Do NOT over-qualify nested model names** — use `RenewalApiModel`, not `PlanPolicyRenewalApiModel`. The parent-child relationship is expressed via the property type (`renewal: RenewalApiModel`), not by prefixing the parent name.
-20. **Struct creation and struct wiring are SEPARATE tasks** — creating `VoucherApiModel` is one task; adding `voucher: VoucherApiModel?` to `PartnershipsData` is a different task. Never mix "define new type" with "integrate into existing type" in the same ticket.
+20. **All Decodable structs from the same API response go in ONE task** — creating `VoucherDataModel`, `PlanPolicyDataModel`, `RenewalDataModel` AND adding `voucher: VoucherDataModel?` to `PartnershipsData` AND adding CodingKeys AND writing backward-compat decoding tests = one ticket. A struct definition without its parent wiring is useless and unshippable. Group by API response, not by individual struct.
 
 ### Backward Compatibility
 
@@ -219,10 +230,12 @@ Read `ui_scope` from `feature_input.yaml`:
 
 ### Layout Component Tasks (SDUI)
 
-21d. **Extract layout component contracts from RFC** — when the RFC adds new layout components (e.g., `VOUCHER_STICKY_BANNER`, `VOUCHER_BOTTOM_SHEET`) or modifies existing ones (e.g., `MOBILE_STICKY_FOOTER` adding `original_price`), create separate tasks for:
-  - Registering the new component type in `LayoutComponentsType` enum
-  - Writing the factory method that parses the component's `[String: Any]` data into a ViewModel
-  - Each factory method task must list ALL fields from the RFC layout JSON example
+21d. **All layout factory methods for the same API response go in ONE task** — when the RFC adds new layout components (e.g., `VOUCHER_STICKY_BANNER`, `VOUCHER_BOTTOM_SHEET`) or modifies existing ones (e.g., `MOBILE_STICKY_FOOTER` adding `original_price`), combine ALL factory work into a single ticket:
+  - Register ALL new component types in `LayoutComponentsType` enum
+  - Write ALL factory methods that parse each component's `[String: Any]` data into ViewModels
+  - Modify existing factory methods (e.g., adding `original_price` to MOBILE_STICKY_FOOTER)
+  - Each factory method must list ALL fields from the RFC layout JSON example
+  - Do NOT split per component — splitting VOUCHER_STICKY_BANNER / VOUCHER_BOTTOM_SHEET / MOBILE_STICKY_FOOTER into 3 tickets creates interdependent stubs that can't ship independently
 21e. **Layout component fields are parsed via `data["key"] as? Type`** — not via Codable. Factory methods use dictionary casting. Missing keys return nil. Include this pattern in the task description.
 
 ### Error Handling — Inline vs Modal
@@ -242,3 +255,12 @@ Read `ui_scope` from `feature_input.yaml`:
 22. **Every `files_to_create` path MUST follow existing directory structure** — new files must be placed in directories that exist in context_pack. Do not invent new directory paths.
 23. **Every `reference_file` MUST exist in context_pack key_files** — do not reference files you haven't confirmed exist. If no reference exists, omit the field rather than guess.
 24. **Every `requirement_ids` MUST trace to the RFC requirements table** — tasks without requirement_ids will fail validation. If a task doesn't map to a numbered RFC requirement, it shouldn't exist.
+
+### Ticket Description Quality
+
+25. **Show actual code, not abstractions** — every task description must include the current method signatures (with file path + line number) and the target code after changes. Don't say "update the presenter" — show the before/after of `onSubscribeCTATapped()`.
+26. **Routing tickets must trace the full CTA-to-destination chain** — user taps CTA → ViewController delegate → Presenter gathers data → Router calls UIFactory → Builder creates destination with EnrolmentDataProvider. Show each step with real code.
+27. **Rendering tickets must trace the full data-to-view chain** — Presenter → ViewModelFactory → ViewModel struct → View.configure(). Show file paths and line numbers. If existing infrastructure already renders the data (e.g., `MessageView` for `SubscriptionMessageViewModel`), say "verify this works" rather than proposing new views.
+28. **Paste RFC JSON in every ticket** — the implementer should never have to go find the RFC section. Copy the relevant JSON example into the ticket description.
+29. **Cite existing infrastructure before proposing new code** — read the codebase to find existing views, protocols, and patterns (e.g., `PaymentInputProtocol.isZeroPayment`, `MessageView`, `SubscriptionMessageViewModel`). Use what exists. Don't invent new components.
+30. **Every ticket needs an Out of Scope section** — explicitly name what this ticket does NOT do, especially when related work is split across tickets. This prevents scope creep and makes dependencies clear.
