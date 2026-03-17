@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.3 (2026-03-17)
+
+### Fixed: MCP Prerequisite Gate
+
+- MCP health check is now a **blocking prerequisite** before Stage 0 — no more silent skipping
+- If MCPs are missing: guides user to run `./install.sh --setup-mcps`, then restart the Claude session
+- Pipeline only proceeds if MCPs are confirmed available OR user **explicitly** opts out
+- Shows clear status table (✅/❌) for GitHub, Figma, and Atlassian MCPs
+
 ## v1.4.2 (2026-03-17)
 
 ### Fixed: Pipeline Reliability
