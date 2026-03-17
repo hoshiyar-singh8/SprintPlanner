@@ -103,14 +103,22 @@ This matters for bottom sheets and any container that sizes itself to content. A
 
 API response models (structs decoded from JSON) MUST conform to `Decodable`, not `Codable`. We never encode these back to JSON — `Codable` adds an unnecessary `Encodable` conformance. Only use `Codable` when the struct is both sent AND received (e.g., request bodies that are also in responses).
 
-### Field Accuracy — Use Exact API Contract
+### Field Accuracy — Use RFC JSON Examples as Source of Truth
 
 When creating API model structs:
 
-1. **Use EXACT field names from the RFC/API contract** — do NOT paraphrase, infer, or combine fields from surrounding text. If the RFC says the `voucher` object has `code`, `status`, `title` — those are the only fields. Do not add `originalPrice`, `discountedPrice`, or `paymentRequired` because they appear elsewhere in the RFC.
-2. **Each JSON object = one struct** — if the API returns `{ "voucher": {...}, "plan_policy": {...} }`, that's two separate structs, not fields mixed together.
-3. **Optionality matches the contract** — if the API docs say a field can be absent, make it optional (`String?`). If always present, make it non-optional.
-4. **Verify every field against the RFC** — before finalizing, list each struct field and confirm it appears in the API contract for THAT specific object. Remove any field that doesn't.
+1. **Use the JSON payload examples in the RFC as the source of truth** — NOT the prose descriptions. Find the highlighted/annotated JSON blocks and extract field names, types, and optionality directly from them.
+2. **Cross-reference ALL JSON examples** — the RFC typically shows success, failure, and edge case payloads. Compare the same object across all examples:
+   - Field present in all examples with a value → non-optional
+   - Field is `null` in some examples → optional (`Type?`)
+   - Field absent in some examples → optional with `decodeIfPresent`
+3. **Each JSON object = one struct** — if the API returns `{ "voucher": {...}, "plan_policy": {...} }`, that's two separate structs. Do NOT merge fields from `data.voucher` with fields from `layout[].VOUCHER_STICKY_BANNER` — they are different JSON objects with different schemas.
+4. **Match JSON types exactly**:
+   - `34.50` (number) → `Double`, NOT `DynamicStringRawObject`
+   - `"Free"` (string) → `String`, NOT `DynamicStringRawObject`
+   - `{ "text": "...", "placeholders": [...] }` (object) → `DynamicStringRawObject`
+   - `null` → the field is optional
+5. **Verify every field against the JSON** — before finalizing, list each struct field and confirm it appears in the JSON payload for THAT specific object. Remove any field that doesn't appear in any JSON example.
 
 ### Naming Conventions for Model Structs
 

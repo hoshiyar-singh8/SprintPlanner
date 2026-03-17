@@ -200,11 +200,13 @@ Read `ui_scope` from `feature_input.yaml`:
 
 ### Anti-Hallucination: API Model Field Accuracy
 
-17. **Model tasks MUST list EXACT fields from the RFC/API contract** — do NOT paraphrase, infer, or merge fields from different sections of the RFC. For each struct:
-    - List every field name and type explicitly in the task description
-    - Cross-reference each field against the specific JSON object definition in the RFC
-    - Remove any field that doesn't appear in the API contract for THAT specific object
-    - If the RFC says `voucher` has fields `code`, `status`, `title` — the struct has exactly those fields, nothing more
+17. **Model tasks MUST list EXACT fields from the RFC JSON examples** — the source of truth for API model fields is the **JSON payload examples** in the RFC, NOT the prose text. For each struct:
+    - Find the JSON example in the RFC that shows the object (e.g., `"voucher": { ... }`)
+    - List every field name, type, and optionality exactly as shown in the JSON
+    - Cross-reference across ALL JSON examples (success, failure, edge cases) to determine optionality — if a field is `null` in one example and present in another, it's optional
+    - Remove any field that doesn't appear in the JSON payload for THAT specific object
+    - Do NOT confuse `data.data.voucher` fields with `layout[].VOUCHER_STICKY_BANNER` fields — they are different objects with different schemas
+    - If the RFC JSON shows `"original_price": 34.50` (a Double), do NOT map it as `DynamicStringRawObject` because some other field uses that type
 18. **Use `Decodable`, NOT `Codable`** for API response models — we never encode these back to JSON. Only use `Codable` when a struct is both sent and received.
 19. **Do NOT over-qualify nested model names** — use `RenewalApiModel`, not `PlanPolicyRenewalApiModel`. The parent-child relationship is expressed via the property type (`renewal: RenewalApiModel`), not by prefixing the parent name.
 20. **Struct creation and struct wiring are SEPARATE tasks** — creating `VoucherApiModel` is one task; adding `voucher: VoucherApiModel?` to `PartnershipsData` is a different task. Never mix "define new type" with "integrate into existing type" in the same ticket.

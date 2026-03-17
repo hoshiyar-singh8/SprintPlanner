@@ -28,6 +28,50 @@ For each requirement found in the RFC, extract:
 - **Ambiguity Level**: clear | needs-clarification | undefined
 - **Dependent On**: Other REQ IDs or external systems
 
+## API Contract Extraction
+
+When an RFC contains API request/response changes, extract the exact contract from the **JSON examples**, not the prose.
+
+### Step 1: Find ALL JSON examples in the RFC
+
+Scan the entire RFC for JSON code blocks. Group them by scenario:
+- Success response
+- Failure/error response
+- Edge case responses (e.g., manual_apply, partial data)
+
+### Step 2: For each new JSON object, extract the field table
+
+For every new or modified JSON object (e.g., `voucher`, `plan_policy`), build a field table:
+
+| Field | JSON key | JSON type | Optional? | Swift type | Evidence |
+|-------|----------|-----------|-----------|------------|----------|
+| status | `"status"` | string | No (present in all examples) | `String` | `"applied"`, `"failed"`, `"manual_apply"` |
+| code | `"code"` | string/null | Yes (null in manual_apply) | `String?` | `"FREE-123"`, `null` |
+| originalPrice | `"original_price"` | number | No | `Double` | `34.50` |
+
+### Step 3: Determine types from JSON values, NOT from prose
+
+| JSON value | Swift type | NOT |
+|------------|-----------|-----|
+| `34.50` | `Double` | NOT `DynamicStringRawObject` |
+| `"Free"` | `String` | NOT `DynamicStringRawObject` |
+| `true` / `false` | `Bool` | |
+| `null` | Field is optional (`Type?`) | |
+| `{ "text": "...", "placeholders": [...] }` | `DynamicStringRawObject` | NOT `String` |
+| `[{ ... }]` | `[SomeModel]` | |
+
+### Step 4: Distinguish data objects from layout objects
+
+RFCs with server-driven UI (SDUI) have TWO layers:
+- **`data`** — domain/business data (e.g., `data.data.voucher`)
+- **`layout`** — UI component configurations (e.g., `layout[].VOUCHER_STICKY_BANNER`)
+
+These are DIFFERENT objects with DIFFERENT schemas. The `voucher` data object has fields like `status`, `code`, `original_price`. The `VOUCHER_STICKY_BANNER` layout component has fields like `state`, `title`, `action`. Do NOT merge them into one model.
+
+### Step 5: Output
+
+Produce a `## API Contract` section in clarifications.md with the field table for each new object. This becomes the authoritative reference for the breakdown and jira-writer agents.
+
 ## Gap Identification
 
 Actively look for:
