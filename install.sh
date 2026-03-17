@@ -321,6 +321,7 @@ VEOF
 fi  # end of if [[ "${RUN_MCP_ONLY:-}" != "true" ]]
 
 # --- MCP Server Setup (Global — works across all accounts) ---
+export FEATUREPLANNER_SCRIPT_DIR="$SCRIPT_DIR"
 if [[ "${SKIP_MCP_SETUP:-}" != "true" ]]; then
 echo ""
 echo "MCP Server Setup"
@@ -338,21 +339,27 @@ is_yes() {
   esac
 }
 
-# Helper: check if an MCP is already in ALL projects in ~/.claude.json
+# Helper: check if an MCP is already in ALL projects + script dir in ~/.claude.json
 mcp_exists_global() {
   python3 -c "
-import json, sys
+import json, sys, os
 with open('$CLAUDE_JSON') as f:
     data = json.load(f)
-# Check all projects — MCP must exist in every project
 projects = data.get('projects', {})
 if not projects:
     sys.exit(1)
+# Check all existing projects
 for path, pdata in projects.items():
     if isinstance(pdata, dict):
         mcps = pdata.get('mcpServers', {})
         if '$1' not in mcps:
             sys.exit(1)
+# Also check that the script dir has an entry
+script_dir = os.environ.get('FEATUREPLANNER_SCRIPT_DIR', '')
+if script_dir:
+    rp = os.path.realpath(script_dir)
+    if rp not in projects and script_dir not in projects:
+        sys.exit(1)
 sys.exit(0)
 " 2>/dev/null
 }
@@ -366,6 +373,7 @@ add_mcp_global() {
 import json
 with open('$CLAUDE_JSON', 'r') as f:
     data = json.load(f)
+import os
 mcp_entry = {'type': '$mcp_type', 'url': '$url'}
 # Add to top-level mcpServers
 if 'mcpServers' not in data:
@@ -381,6 +389,30 @@ for path, pdata in projects.items():
         if '$name' not in pdata['mcpServers']:
             pdata['mcpServers']['$name'] = mcp_entry
             count += 1
+# Also ensure common paths have entries (for new projects)
+cwd = os.getcwd()
+script_dir = os.environ.get('FEATUREPLANNER_SCRIPT_DIR', cwd)
+# Collect unique paths to check
+extra_paths = set()
+for p in [cwd, script_dir]:
+    rp = os.path.realpath(p)  # resolve symlinks (/tmp -> /private/tmp)
+    extra_paths.add(p)
+    extra_paths.add(rp)
+cwd_variants = list(extra_paths)
+for cwd_path in cwd_variants:
+    if cwd_path not in projects:
+        projects[cwd_path] = {
+            'mcpServers': {},
+            'enabledMcpjsonServers': [],
+            'disabledMcpjsonServers': [],
+            'mcpContextUris': []
+        }
+        count += 1
+    if '$name' not in projects[cwd_path].get('mcpServers', {}):
+        if 'mcpServers' not in projects[cwd_path]:
+            projects[cwd_path]['mcpServers'] = {}
+        projects[cwd_path]['mcpServers']['$name'] = mcp_entry
+        count += 1
 with open('$CLAUDE_JSON', 'w') as f:
     json.dump(data, f, indent=2)
 print(f'  Added $name to {count} projects + global config')
