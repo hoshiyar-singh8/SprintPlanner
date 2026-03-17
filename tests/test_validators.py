@@ -389,6 +389,73 @@ tasks:
 """)
         self.assertEqual(validate_classification.validate(path), 1)
 
+    def test_herogen_high_file_count_warns(self):
+        """HeroGen task modifying 4+ files should produce a warning."""
+        path = self._write_yaml("""
+tasks:
+  - id: TASK-001
+    title: Wide change
+    layer: api
+    sp: 2
+    depends_on: []
+    acceptance_criteria:
+      - All endpoints updated
+    files_to_modify:
+      - {path: "a.swift", description: "x"}
+      - {path: "b.swift", description: "x"}
+      - {path: "c.swift", description: "x"}
+      - {path: "d.swift", description: "x"}
+    execution_mode:
+      type: herogen
+      rationale: API threading through 4 files
+      confidence: medium
+      risks: []
+""")
+        # Should pass (warning only, not error)
+        self.assertEqual(validate_classification.validate(path), 0)
+
+
+class TestValidateTaskSpecsVagueCriteria(unittest.TestCase):
+    def _write_yaml(self, content):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+        f.write(content)
+        f.close()
+        self.addCleanup(os.unlink, f.name)
+        return f.name
+
+    def test_vague_criteria_warned(self):
+        """Vague acceptance criteria should produce a warning."""
+        path = self._write_yaml("""
+tasks:
+  - id: TASK-001
+    title: Some task
+    layer: config
+    sp: 1
+    depends_on: []
+    requirement_ids: [R1]
+    acceptance_criteria:
+      - Feature works correctly
+      - Flag defaults to false
+""")
+        # Should pass (warning only)
+        self.assertEqual(validate_task_specs.validate(path), 0)
+
+    def test_cleanup_layer_valid(self):
+        """cleanup should be a valid layer."""
+        path = self._write_yaml("""
+tasks:
+  - id: TASK-001
+    title: Remove old flag
+    layer: cleanup
+    sp: 1
+    depends_on: []
+    requirement_ids: [R1]
+    acceptance_criteria:
+      - Flag enum case removed
+      - All call sites cleaned up
+""")
+        self.assertEqual(validate_task_specs.validate(path), 0)
+
 
 class TestValidatePlan(unittest.TestCase):
     def _write_md(self, content):
