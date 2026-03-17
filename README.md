@@ -213,61 +213,30 @@ Edit `skills/task-decomposition-rules/SKILL.md` to adjust layer definitions and 
 
 ## Pipeline Architecture
 
-```
-                    ┌─────────────────────────────────┐
-                    │  PostToolCall: validate_artifact │
-                    │  (auto-fires on every Write)    │
-                    └─────────┬───────────────────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │   0. Intake       │
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  1. Discovery     │──→ validate_input + validate_clarifications
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  ★ CP1 — Q&A      │  (user answers questions)
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  2. Context       │──→ compress_context + validate_context
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  3. Planning      │──→ validate_plan
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  ★ CP2 — Plan     │  (user approves plan)
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  4. Breakdown     │──→ validate_task_specs
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  5. Classify      │──→ validate_classification
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  ★ CP3 — Tasks    │  (user reviews classifications)
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  6. Jira Write    │──→ render_jira_payload
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  7. Quality Gate  │──→ quality_gate
-                    └─────────┬─────────┘
-                              │
-                    ┌─────────▼─────────┐
-                    │  ★ CP4 — Review   │  (final review)
-                    └─────────┬─────────┘
-                              │
-                         ✓ Complete
+```mermaid
+flowchart TD
+    Hook["PostToolUse: validate_artifact\n(auto-fires on every Write)"] -.-> S0
+
+    S0["0. Intake"] --> S1
+    S1["1. Discovery"] -->|"validate_input\nvalidate_clarifications"| CP1
+    CP1{{"CP1 — Q&A\n(user answers questions)"}} --> S2
+    S2["2. Context"] -->|"compress_context\nvalidate_context"| S3
+    S3["3. Planning"] -->|"validate_plan"| CP2
+    CP2{{"CP2 — Plan\n(user approves plan)"}} --> S4
+    S4["4. Breakdown"] -->|"validate_task_specs"| S5
+    S5["5. Classify"] -->|"validate_classification"| CP3
+    CP3{{"CP3 — Tasks\n(user reviews classifications)"}} --> S6
+    S6["6. Jira Write"] -->|"render_jira_payload"| S7
+    S7["7. Quality Gate"] -->|"quality_gate"| CP4
+    CP4{{"CP4 — Review\n(final review)"}} --> S8
+    S8["8. Push Strategy"] --> Done["Complete"]
+
+    style Hook fill:#f3e8ff,stroke:#7c3aed
+    style CP1 fill:#fef3c7,stroke:#d97706
+    style CP2 fill:#fef3c7,stroke:#d97706
+    style CP3 fill:#fef3c7,stroke:#d97706
+    style CP4 fill:#fef3c7,stroke:#d97706
+    style Done fill:#d1fae5,stroke:#059669
 ```
 
 Failed stages retry up to 2x with memory, then escalate to the user.
