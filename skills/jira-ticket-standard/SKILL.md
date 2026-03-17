@@ -269,6 +269,9 @@ Follow `EnrolmentVoucherBannerView.swift` pattern.
 - Do NOT add delegate/protocol for tap handling (out of scope)
 - Do NOT import UIKit components when Bento equivalents exist
 - Do NOT hardcode strings — use ViewModel properties
+- Do NOT write unit tests for UIView subclasses or ViewModel structs (iOS team convention)
+- Do NOT put setup logic in `layoutSubviews()` — use `init` or `setup()` (only dynamic sizing in layoutSubviews)
+- Do NOT set `tintColor` without `.alwaysTemplate` rendering mode on images
 ```
 
 ### Config Flag Tasks

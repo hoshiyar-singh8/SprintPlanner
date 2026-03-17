@@ -140,6 +140,9 @@ tasks:
 - `repository` / `data` — data access layer
 - `fragment` / `composable` — UI screen entry points
 - `di` — Hilt/Dagger/Anvil module registration
+- New feature modules follow API/Impl split: `feature-api/` (pure Kotlin interfaces) + `feature/` (implementation with DI)
+- New modules need CODEOWNERS entry in task description
+- TODO stubs behind feature flags are acceptable — ship partial, follow up later
 
 **Web:**
 - `component` / `page` — React/Vue components

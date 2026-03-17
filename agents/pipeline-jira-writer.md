@@ -300,6 +300,7 @@ For Android tickets, adjust:
 ## Platform-Specific Anti-Patterns (Include in Every Hero Gen Ticket)
 
 ### iOS Anti-Patterns (Always Include for iOS Hero Gen Tickets)
+- Do NOT write unit tests for UIView subclasses or ViewModel structs (team convention: "we do not write tests for UI")
 - Do NOT use functions for parameterless builders — use computed properties (IOS-0002)
 - Do NOT use `== true` or `== false` in comparisons or assertions (IOS-0009)
 - Do NOT use redundant `return` in single-expression computed properties
@@ -307,12 +308,17 @@ For Android tickets, adjust:
 - Do NOT use range assertions (`XCTAssertGreaterThan(x, 0)`) — use exact values (`XCTAssertEqual(x, 32.0)`)
 - Do NOT add parameters "for future use" — YAGNI
 - Do NOT leave empty wrapper functions when removing flag call sites
+- Do NOT put setup logic in `layoutSubviews()` — only dynamic sizing belongs there
+- Do NOT set icon `tintColor` without `.alwaysTemplate` rendering mode
 
 ### Android Anti-Patterns (Always Include for Android Hero Gen Tickets)
 - Do NOT add optional defaults (`= null`) on parameters that every call site always provides
 - Do NOT depend on implementation modules — use API/abstraction modules
 - Do NOT include unrelated diffs (import reordering, empty lines in other files)
 - Do NOT add parameters "for future use" — YAGNI
+- New modules MUST have a CODEOWNERS entry — CI blocks without it
+- TUIT/integration tests MUST be updated when changing user-facing behavior
+- 100% diff coverage is required (Codacy gate enforced)
 
 ### Mapper/Comparator Completeness Rule
 When writing tickets for mappers, comparators, or field-level transformations:

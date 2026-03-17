@@ -14,10 +14,13 @@ Based on analysis of real HeroGen PRs — what gets MERGED vs CLOSED.
 ### What HeroGen Succeeds At (Merged PRs)
 - **Single API endpoint additions** — adding a query param, new GET/POST route (iOS #35660, Android #43745)
 - **Single UI component with all states** — one View + ViewModel, both states in same PR (iOS #35708, #35778)
-- **Config flags** — S3 feature flag with version gating (Android #43620)
+- **Config flags** — S3 feature flag with version gating (iOS #35498, Android #43620)
 - **Single mapper** — one-direction data transformation (iOS #35820)
-- **Cleanup/deletion** — removing dead code behind removed flag (iOS #35685)
+- **Cleanup/deletion** — removing dead code behind removed flag (iOS #35685, Android #43477)
 - **Module creation** — new module with clear public API and no integration wiring (Android #43636)
+- **Infrastructure/plumbing** — logging listeners, comparison frameworks behind flags (Android #43680)
+- **All-new-files PRs** — merge fastest with least friction (no existing code to break)
+- **TODO stubs behind feature flags** — acceptable to ship partial impl, follow up later (Android #43691)
 
 ### What HeroGen Fails At (Closed/Rejected PRs)
 - **Over-split UI states** — 3 separate tickets for one component's empty/loading/error states (combine them)
@@ -107,6 +110,33 @@ Does it modify >3 existing files? ──YES──→ HUMAN
 - Model/mapper tests with obvious input/output → Hero Gen OK
 - Tests following existing test file pattern exactly → Hero Gen OK
 - Snapshot/preview tests for UI components → Hero Gen OK (if reference pattern exists)
+
+## Platform-Specific Test Conventions
+
+### iOS Test Rules
+- **Do NOT write tests for UIView subclasses or ViewModel structs** — team convention: "we do not write tests for UI"
+- Tests are written for: Presenters, Interactors, Mappers, API layers, Deeplink handlers
+- Use exact assertion values (`XCTAssertEqual(x, 32.0)`) not range checks (`XCTAssertGreaterThan`)
+- Test factories should be nouns: `sut(...)` not `makeSUT(...)`
+
+### Android Test Rules
+- **100% diff coverage is enforced** — Codacy gate blocks merge without it
+- Use JUnit 5 (`@Test` from `org.junit.jupiter.api.Test`) with `@UnitTest` annotation
+- Use MockK (subscription/loyalty) or Mockito-Kotlin (cart-sdk) — check module convention
+- Coroutine tests: `runTest { ... }` with `advanceUntilIdle()`
+- **TUIT tests must be updated** when PR changes user-facing behavior — CI blocks otherwise
+- New modules MUST have CODEOWNERS entry or CI blocks
+
+## PR Success Metrics (From Real Data)
+
+| Metric | Sweet Spot | Risk Zone |
+|--------|-----------|-----------|
+| Files changed | 2-9 | 15+ (CI breakage risk) |
+| Lines added | 50-300 | 500+ (review fatigue) |
+| New vs modify | Mostly new | Mostly modify (integration risk) |
+| Time to merge | 16-24h | 4+ days (signals issues) |
+| Review rounds | 0-2 | 3+ (scope or quality issue) |
+| Diff coverage | 100% (Android mandatory) | <90% (Android blocks) |
 
 ## Granularity Check (Prevent Over-Splitting)
 
