@@ -31,34 +31,62 @@ Stage 7: Quality Gate → validation_report.md → ★ CHECKPOINT 4
 2. Check for existing `pipeline_state.yaml` in the feature directory — if found, resume
 3. If fresh start, begin Stage 0
 
-## MCP Health Check (before Stage 0)
+## MCP Health Check (FIRST STEP — before Stage 0)
 
-Before starting intake, detect which MCP servers are available. This determines what the pipeline can do:
+**CRITICAL: This is a prerequisite gate, not a soft warning.** MCPs only load when a Claude session starts. If an MCP is missing, installing it mid-session won't help — the user must restart. So check FIRST, fix, restart, THEN run the pipeline.
 
-**GitHub MCP** — needed only if the user provides a GitHub repo URL (not needed for local repos):
-- Try listing MCP tools. If `get_repository_content` or `search_code` tools are unavailable:
-  - Tell user: "GitHub MCP is not installed. You can either:
-    1. Install it: `claude mcp add github -- npx -y @anthropic-ai/github-mcp`
-    2. Provide a local path to a cloned repo instead"
-  - If user chose GitHub source, block until MCP is installed or they switch to local path
+### Step 1: Detect available MCPs
 
-**Figma MCP** — needed only if the user provides Figma URLs:
-- Try listing MCP tools. If `get_design_context` or `get_metadata` tools are unavailable:
-  - Tell user: "Figma MCP is not installed. You can either:
-    1. Install it now: `claude mcp add figma -s user -- npx -y figma-developer-mcp --figma-api-key=YOUR_KEY --stdio`
-    2. Skip Figma analysis and provide design specs manually"
-  - If user provided Figma URLs, warn that designs will be skipped unless MCP is installed
+Check which MCP tools are available in this session:
 
-**Atlassian MCP** — enhances Jira integration (optional, pipeline works without it via REST API hooks):
-- If Atlassian MCP tools are available, the pipeline can use them for richer Jira interactions (query boards, read existing tickets, check sprint status)
-- If not available, the pipeline falls back to `jira_auto_config.py` and `create_jira_tickets.py` REST API hooks — fully functional without MCP
-- To install: `claude mcp add atlassian -s user -e ATLASSIAN_SITE_URL=... -e ATLASSIAN_USER_EMAIL=... -e ATLASSIAN_API_TOKEN=... -- npx -y atlassian-mcp --stdio`
+| MCP | How to detect | Required for |
+|-----|--------------|-------------|
+| **GitHub** | `get_repository_content` or `search_code` tool exists | Remote repo scanning |
+| **Figma** | `get_design_context` or `get_metadata` tool exists | Design analysis |
+| **Atlassian** | Atlassian MCP tools exist | Enhanced Jira (optional — REST API fallback works) |
+
+### Step 2: Report status to user
+
+Present a clear status table:
+
+> **MCP Status Check:**
+> - GitHub MCP: ✅ Connected / ❌ Not installed
+> - Figma MCP: ✅ Connected / ❌ Not installed
+> - Atlassian MCP: ✅ Connected / ⚠️ Not installed (optional — REST API fallback available)
+
+### Step 3: If any required MCPs are missing, STOP and help install
+
+If GitHub or Figma MCP is missing, do NOT silently skip them. Instead:
+
+> "Some MCPs are missing. I can set them up for you now. Run this in your terminal:
+>
+> ```bash
+> cd <sprint-planner-install-path>
+> ./install.sh --setup-mcps
+> ```
+>
+> The install path is saved in `~/.claude/.sprint-planner-version` — check the `installed_from` field.
+>
+> **After installing, you must restart this Claude session** (`Ctrl+C` and relaunch `claude`) because MCPs only load at startup. Then run `/run-pipeline` again — your progress will be saved."
+
+**STOP HERE. Do NOT proceed to Stage 0.** The pipeline can only continue if:
+1. The user restarts the session after installing MCPs, OR
+2. The user **explicitly says** they don't want to install MCPs (e.g., "skip", "I don't need it", "proceed without")
+
+**Do NOT assume silence or "ok" means skip.** Ask directly: "Would you like to install the missing MCPs, or skip them and proceed without?"
+
+If the user explicitly opts out:
+- GitHub skip → they must provide a local repo path instead (no remote scanning)
+- Figma skip → record `figma_status: skipped`, warn that UI tasks will be approximate
+- Atlassian skip → no action needed, REST API fallback is fully functional
+
+### Step 4: Store MCP status
 
 Store MCP availability in feature_input.yaml:
 ```yaml
 mcp_status:
-  github: available | unavailable | not_needed
-  figma: available | unavailable | not_needed
+  github: available | skipped | not_needed
+  figma: available | skipped | not_needed
   atlassian: available | unavailable | not_needed
 ```
 

@@ -37,17 +37,42 @@ All arguments are optional — if not provided, you'll ask for them.
 2. Check if a `pipeline_state.yaml` exists for this feature (resume support)
 3. If resuming, skip completed stages and pick up where we left off
 
-### MCP Health Check
-Before starting Stage 0, check which MCP servers are available:
+### MCP Health Check (FIRST STEP — prerequisite gate)
 
-- **GitHub MCP** — needed for scanning remote repos. If user gives a GitHub URL and MCP is missing, guide them:
-  `claude mcp add github -s user -e GITHUB_PERSONAL_ACCESS_TOKEN=... -- npx -y @modelcontextprotocol/server-github`
-  Or suggest switching to a local clone.
-- **Figma MCP** — needed for design analysis. If user provides Figma URLs and MCP is missing, guide them:
-  `claude mcp add figma -s user -- npx -y figma-developer-mcp --figma-api-key=YOUR_KEY --stdio`
-  Or proceed without Figma and note UI tasks will be approximate.
-- **Atlassian MCP** — enhances Jira integration. If missing, pipeline falls back to REST API hooks (fully functional). To install:
-  `claude mcp add atlassian -s user -e ATLASSIAN_SITE_URL=... -e ATLASSIAN_USER_EMAIL=... -e ATLASSIAN_API_TOKEN=... -- npx -y atlassian-mcp --stdio`
+**CRITICAL: This runs BEFORE Stage 0. MCPs only load at session startup.** If an MCP is missing, installing it mid-session won't help — the user must restart Claude. So check first, help install, restart, then run the pipeline.
+
+**Step 1 — Detect MCPs:** Check if these tools exist in the current session:
+- GitHub MCP → look for `get_repository_content` or `search_code` tools
+- Figma MCP → look for `get_design_context` or `get_metadata` tools
+- Atlassian MCP → look for Atlassian tools (optional — REST API fallback works)
+
+**Step 2 — Show status:**
+> **MCP Status Check:**
+> - GitHub MCP: ✅ Connected / ❌ Not installed
+> - Figma MCP: ✅ Connected / ❌ Not installed
+> - Atlassian MCP: ✅ Connected / ⚠️ Not installed (optional)
+
+**Step 3 — If any are missing, STOP and help install:**
+
+> "Some MCPs are missing. To install them, run this in your terminal:
+>
+> ```bash
+> cd <path-from-~/.claude/.sprint-planner-version>
+> ./install.sh --setup-mcps
+> ```
+>
+> **After installing, restart this Claude session** (Ctrl+C → relaunch `claude`), then run `/run-pipeline` again."
+
+**STOP HERE. Do NOT proceed to Stage 0.** The pipeline can only continue if:
+1. The user restarts the session after installing MCPs, OR
+2. The user **explicitly says** they don't want MCPs (e.g., "skip", "I don't need it", "proceed without")
+
+**Do NOT assume silence means skip.** Ask directly: "Would you like to install the missing MCPs, or skip them and proceed without?"
+
+If user explicitly opts out:
+- GitHub skip → must provide local repo path (no remote scanning)
+- Figma skip → record `figma_status: skipped`, UI tasks will be approximate
+- Atlassian skip → no action, REST API fallback works fine
 
 ### Stage 0: Intake (Interactive Q&A)
 
