@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.3.1 (2026-03-17)
+
+### Fixed (from pipeline test run with real RFC)
+
+**Validators:**
+- `validate_clarifications.py` — warns when `## Requirements` table with R-IDs is missing (needed for downstream tracing)
+- `validate_context.py` — checks `key_files` paths against actual repo on disk (warns on missing files when `repo_source: local`)
+- `validate_plan.py` — warns when phase details lack file path references (anti-hallucination: planner must cite context_pack files)
+
+**Quality Gate:**
+- `quality_gate.py` — new requirement coverage check: cross-references R-IDs from `clarifications.md` against `task_specs.yaml` requirement_ids. Warns on uncovered requirements. (15 checks total, up from 14)
+
+**Push Strategy:**
+- `plan_push_strategy.py` — sprint capacity algorithm now prefers completing dependency chains over picking independent tasks. Uses iterative selection scoring: chain continuation > downstream unlock value > topo order
+- `render_jira_payload.py` — now copies `execution_mode` from task_specs to jira_payload.json, fixing `--filter herogen|human` on `create_jira_tickets.py`
+
 ## v1.3.0 (2026-03-17)
 
 ### Added: Push Strategy

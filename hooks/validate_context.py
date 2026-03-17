@@ -74,6 +74,37 @@ def validate(file_path):
                         f"key_files[{i}].path '{path_val}' doesn't look like a file (no extension)"
                     )
 
+    # Check key_files paths against repo (when repo_path is available)
+    if key_files and isinstance(key_files, list):
+        # Try to find feature_input.yaml in same directory for repo_path
+        feature_dir = os.path.dirname(file_path)
+        fi_path = os.path.join(feature_dir, "feature_input.yaml")
+        repo_path = None
+        if os.path.exists(fi_path):
+            try:
+                with open(fi_path, "r") as fi:
+                    fi_data = yaml.safe_load(fi) or {}
+                rp = fi_data.get("repo_path")
+                if rp and os.path.isdir(str(rp)):
+                    repo_path = str(rp)
+            except (yaml.YAMLError, OSError):
+                pass
+
+        if repo_path:
+            missing_files = []
+            for kf in key_files:
+                if not isinstance(kf, dict):
+                    continue
+                kf_path = kf.get("path", "")
+                if not kf_path:
+                    continue
+                full_path = os.path.join(repo_path, kf_path)
+                if not os.path.exists(full_path):
+                    missing_files.append(kf_path)
+            if missing_files:
+                for mf in missing_files:
+                    print(f"WARN: key_file not found on disk: {mf}")
+
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)

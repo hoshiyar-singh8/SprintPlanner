@@ -223,6 +223,10 @@ def render(feature_dir):
         if epic_key:
             payload["fields"]["parent"] = {"key": epic_key}
 
+        # Add execution_mode for downstream filtering
+        if isinstance(exec_mode, dict) and exec_mode.get("type"):
+            payload["execution_mode"] = exec_mode["type"]
+
         payloads.append(payload)
 
     # Write output

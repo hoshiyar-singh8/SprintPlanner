@@ -51,6 +51,17 @@ def validate(file_path):
                     "(expected coverage of multiple question groups)"
                 )
 
+    # Check for Requirements table (needed for downstream tracing)
+    has_requirements = bool(
+        re.search(r"##\s*Requirements", content)
+        and re.search(r"\bR\d+\b", content)
+    )
+    if not has_requirements:
+        print(
+            "WARN: No ## Requirements table with R1/R2/... IDs found — "
+            "downstream task tracing requires numbered requirements"
+        )
+
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)

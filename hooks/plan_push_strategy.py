@@ -98,21 +98,73 @@ def filter_full_plan(tasks):
 
 
 def filter_sprint_capacity(tasks, capacity):
-    """Fill up to capacity SP in dependency order."""
+    """Fill up to capacity SP in dependency order, preferring chain completion.
+
+    Strategy: iteratively select the best eligible task until capacity is full.
+    "Best" = task whose deps are already selected, with priority given to tasks
+    that continue an existing chain (have a selected dep) over independent tasks.
+    Among equal candidates, prefer tasks that unblock more downstream work.
+    """
+    task_map = {t["id"]: t for t in tasks}
     ordered = topological_sort(tasks)
     selected = []
     total_sp = 0
     selected_ids = set()
 
-    for task in ordered:
-        sp = task.get("sp", 1)
-        if total_sp + sp <= capacity:
-            # Check all deps are included
+    # Build children map
+    children = {}
+    for t in tasks:
+        for dep in (t.get("depends_on") or []):
+            children.setdefault(dep, []).append(t["id"])
+
+    def chain_value(tid):
+        """Count total SP unlocked downstream by selecting this task."""
+        visited = set()
+        stack = [tid]
+        value = 0
+        while stack:
+            current = stack.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            for child_id in children.get(current, []):
+                child = task_map.get(child_id)
+                if child:
+                    value += child.get("sp", 1)
+                    stack.append(child_id)
+        return value
+
+    # Iteratively pick the best eligible task
+    remaining = list(ordered)
+    while remaining:
+        best = None
+        best_score = (-1, -1, -1)  # (continues_chain, chain_val, -topo_idx)
+
+        for idx, task in enumerate(remaining):
+            sp = task.get("sp", 1)
+            if total_sp + sp > capacity:
+                continue
             deps = task.get("depends_on") or []
-            if all(d in selected_ids for d in deps):
-                selected.append(task)
-                selected_ids.add(task["id"])
-                total_sp += sp
+            if not all(d in selected_ids for d in deps):
+                continue
+
+            # Prefer tasks that continue an existing chain
+            continues = 1 if any(d in selected_ids for d in deps) else 0
+            cv = chain_value(task["id"])
+            score = (continues, cv, -idx)
+
+            if score > best_score:
+                best_score = score
+                best = (idx, task)
+
+        if best is None:
+            break
+
+        idx, task = best
+        selected.append(task)
+        selected_ids.add(task["id"])
+        total_sp += task.get("sp", 1)
+        remaining.pop(idx)
 
     return selected
 

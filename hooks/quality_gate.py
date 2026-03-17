@@ -118,7 +118,32 @@ def quality_gate(feature_dir):
         else:
             results["warn"].append("No architecture section in context_pack")
 
-    # 7. Dependency integrity
+    # 7. Requirement coverage — every R-ID in clarifications must be covered by a task
+    clarifications_md = load_md(os.path.join(feature_dir, "clarifications.md")) or ""
+    req_ids_in_clarifications = set(re.findall(r"\bR(\d+)\b", clarifications_md))
+    if req_ids_in_clarifications and tasks:
+        task_req_ids = set()
+        for t in tasks:
+            if isinstance(t, dict):
+                for rid in (t.get("requirement_ids") or []):
+                    # Extract number from "R1", "R2", etc.
+                    m = re.match(r"R(\d+)", str(rid))
+                    if m:
+                        task_req_ids.add(m.group(1))
+        uncovered = req_ids_in_clarifications - task_req_ids
+        if not uncovered:
+            results["pass"].append(
+                f"All {len(req_ids_in_clarifications)} requirements (R-IDs) "
+                f"covered by tasks"
+            )
+        else:
+            uncovered_labels = sorted(f"R{r}" for r in uncovered)
+            results["warn"].append(
+                f"Requirements not covered by any task: "
+                f"{', '.join(uncovered_labels)}"
+            )
+
+    # 8. Dependency integrity
     task_ids = {t.get("id") for t in tasks if isinstance(t, dict) and t.get("id")}
     dangling_deps = []
     for t in tasks:
@@ -132,7 +157,7 @@ def quality_gate(feature_dir):
     elif task_ids:
         results["pass"].append("All dependency references are valid")
 
-    # 8. Check jira_payload.json if it exists
+    # 9. Check jira_payload.json if it exists
     payload_path = os.path.join(feature_dir, "jira_payload.json")
     if os.path.exists(payload_path):
         try:

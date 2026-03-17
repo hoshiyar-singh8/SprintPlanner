@@ -55,6 +55,21 @@ def validate(file_path):
     if not re.search(r"##\s*Task\s*Granularity", content, re.IGNORECASE):
         print("WARN: No Task Granularity Guidance section — recommended to prevent over/under-splitting")
 
+    # Check for reference file paths in phase details (anti-hallucination)
+    phase_section = re.search(
+        r"##\s*(?:Phase Details|Implementation Phases)\s*\n(.*?)(?=\n## |\Z)",
+        content, re.DOTALL | re.IGNORECASE
+    )
+    if phase_section:
+        phase_text = phase_section.group(1)
+        # Look for file path references (contain / and file extension)
+        file_refs = re.findall(r"[A-Za-z][A-Za-z0-9_/]+\.\w{1,5}", phase_text)
+        if not file_refs:
+            print(
+                "WARN: No file path references found in phase details — "
+                "planner should cite specific files from context_pack for each phase"
+            )
+
     # Basic content length check
     if len(content.strip()) < 500:
         errors.append("Plan appears too short (< 500 chars) — likely incomplete")
