@@ -274,6 +274,58 @@ Follow `EnrolmentVoucherBannerView.swift` pattern.
 - Do NOT set `tintColor` without `.alwaysTemplate` rendering mode on images
 ```
 
+### Model / Decodable Struct Tasks
+
+```markdown
+## [TICKET-ID] Create VoucherApiModel, PlanPolicyApiModel, and RenewalApiModel structs
+
+- **Component**: iOS
+- **Type**: Hero Gen Task
+- **Story Points**: 1
+
+### Context
+Add three new Decodable structs to PartnershipsViewModel.swift following the
+existing LayoutPlanDataModel pattern.
+
+### Files to Modify
+| File | Change |
+|------|--------|
+| `Subscription/Source/Views/Partnerships/PartnershipsViewModel.swift` | Add three Decodable structs above `PartnershipsData` |
+
+### Exact Requirements
+1. `VoucherApiModel` fields: `code: String`, `status: String` ("applied" | "manual_apply"), `title: String?`. CodingKeys snake_case.
+2. `PlanPolicyApiModel` fields: `paymentMethodRequired: Bool` (`payment_method_required`), `renewal: RenewalApiModel?`.
+3. `RenewalApiModel` fields: `type: String` ("churn" | "transition"), `message: String?`.
+4. All structs `Decodable` only — NOT `Codable`.
+5. Place above `PartnershipsData`. Follow `LayoutPlanDataModel` pattern: fields first, then `CodingKeys`.
+
+### Reference Implementation
+Follow `LayoutPlanDataModel` pattern in the same file.
+
+### Acceptance Criteria
+- [ ] VoucherApiModel, PlanPolicyApiModel, RenewalApiModel compile as Decodable structs
+- [ ] VoucherApiModel decodes `code`, `status`; `title` is optional
+- [ ] PlanPolicyApiModel decodes `payment_method_required` as Bool and optional `renewal`
+- [ ] RenewalApiModel decodes `type` and optional `message`
+- [ ] A JSON payload missing all three structs' parent keys still compiles and decodes without crash
+- [ ] No existing types in the file are modified
+
+### Anti-patterns
+- Do NOT use `Codable` — these are response-only models, use `Decodable`
+- Do NOT write unit tests for these structs (covered by a separate decoding test task)
+- Do NOT use functions for parameterless builders — use computed properties
+- Do NOT add `is_removable` or parameters for future use (YAGNI)
+- Do NOT over-qualify names — `RenewalApiModel` not `PlanPolicyRenewalApiModel`
+- Do NOT mix struct creation with adding fields to existing types — that is a separate task
+```
+
+**Key rules for model tasks:**
+1. **Exact fields only** — list every field from the API contract, nothing more. If the RFC says 3 fields, the struct has 3 fields.
+2. **Decodable, not Codable** — API response models are never encoded back.
+3. **Simple names** — `RenewalApiModel`, not `PlanPolicyRenewalApiModel`. Parent-child is expressed via the property type.
+4. **Creation ≠ Wiring** — "Define new struct" and "Add property of that type to existing struct" are always separate tickets.
+5. **Follow existing patterns** — reference a concrete file (e.g., `LayoutPlanDataModel`) for struct layout conventions.
+
 ### Config Flag Tasks
 
 ```markdown

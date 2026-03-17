@@ -97,6 +97,40 @@ This matters for bottom sheets and any container that sizes itself to content. A
 ### Translation / Localization
 - localisation also varies between `translator.translate(key:)`, `LocalisationProvider`, and GraphQL translation mappers
 
+## API Model Conventions
+
+### Decodable, NOT Codable
+
+API response models (structs decoded from JSON) MUST conform to `Decodable`, not `Codable`. We never encode these back to JSON — `Codable` adds an unnecessary `Encodable` conformance. Only use `Codable` when the struct is both sent AND received (e.g., request bodies that are also in responses).
+
+### Field Accuracy — Use Exact API Contract
+
+When creating API model structs:
+
+1. **Use EXACT field names from the RFC/API contract** — do NOT paraphrase, infer, or combine fields from surrounding text. If the RFC says the `voucher` object has `code`, `status`, `title` — those are the only fields. Do not add `originalPrice`, `discountedPrice`, or `paymentRequired` because they appear elsewhere in the RFC.
+2. **Each JSON object = one struct** — if the API returns `{ "voucher": {...}, "plan_policy": {...} }`, that's two separate structs, not fields mixed together.
+3. **Optionality matches the contract** — if the API docs say a field can be absent, make it optional (`String?`). If always present, make it non-optional.
+4. **Verify every field against the RFC** — before finalizing, list each struct field and confirm it appears in the API contract for THAT specific object. Remove any field that doesn't.
+
+### Naming Conventions for Model Structs
+
+- **Suffix**: `ApiModel` for API response models (e.g., `VoucherApiModel`, `RenewalApiModel`)
+- **Do NOT over-qualify names** — use `RenewalApiModel`, not `PlanPolicyRenewalApiModel`. The parent-child relationship is expressed via the property type, not the name.
+- **Nested models get their own top-level struct** — define `RenewalApiModel` as a standalone struct, then reference it as a property in `PlanPolicyApiModel`. Do not nest struct definitions inside other structs.
+- **Follow existing naming patterns** in the file — if existing models in the same file use `XxxApiModel`, follow that pattern exactly.
+
+### CodingKeys
+
+- Always provide explicit `CodingKeys` when JSON uses snake_case and Swift uses camelCase.
+- Order: fields first, then `CodingKeys` enum (matching `LayoutPlanDataModel` convention).
+- Keys that are identical in JSON and Swift (e.g., `code`, `status`) still appear in `CodingKeys` for clarity.
+
+### Placement
+
+- API model structs for a feature go in the same file as related models (e.g., alongside `LayoutPlanDataModel` in `PartnershipsViewModel.swift`).
+- Place new structs near related existing structs, not at the end of the file.
+- Creating separate files for each model is acceptable for larger features but not required for 2-3 small structs.
+
 ## What not to assume
 
 - not every B2C feature is classic VIPER

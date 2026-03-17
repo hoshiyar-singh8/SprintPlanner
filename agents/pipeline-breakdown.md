@@ -13,6 +13,7 @@ Load and follow the rules from these skills:
 - `task-decomposition-rules` — Single-layer principle, VIPER splitting, UI scoping ladder
 - `story-point-sizing` — 1/2/3 scale, when to split, complexity criteria
 - `dependency-mapping` — DAG rules, dependency types, standard chains
+- `mobile-architecture-rules` — API model conventions (Decodable vs Codable, naming, field accuracy)
 
 ## Input
 
@@ -197,11 +198,22 @@ Read `ui_scope` from `feature_input.yaml`:
 15. **Keep files_to_modify ≤ 3** for Hero Gen tasks — tasks modifying 4+ existing files should be human or split further.
 16. **No "for future use" parameters** — do not include acceptance criteria that add unused parameters or stubs for future work.
 
+### Anti-Hallucination: API Model Field Accuracy
+
+17. **Model tasks MUST list EXACT fields from the RFC/API contract** — do NOT paraphrase, infer, or merge fields from different sections of the RFC. For each struct:
+    - List every field name and type explicitly in the task description
+    - Cross-reference each field against the specific JSON object definition in the RFC
+    - Remove any field that doesn't appear in the API contract for THAT specific object
+    - If the RFC says `voucher` has fields `code`, `status`, `title` — the struct has exactly those fields, nothing more
+18. **Use `Decodable`, NOT `Codable`** for API response models — we never encode these back to JSON. Only use `Codable` when a struct is both sent and received.
+19. **Do NOT over-qualify nested model names** — use `RenewalApiModel`, not `PlanPolicyRenewalApiModel`. The parent-child relationship is expressed via the property type (`renewal: RenewalApiModel`), not by prefixing the parent name.
+20. **Struct creation and struct wiring are SEPARATE tasks** — creating `VoucherApiModel` is one task; adding `voucher: VoucherApiModel?` to `PartnershipsData` is a different task. Never mix "define new type" with "integrate into existing type" in the same ticket.
+
 ### Anti-Hallucination: File Path Validation
 
-17. **Every `files_to_modify` path MUST exist in `context_pack.yaml`** — before writing task_specs.yaml, cross-check every path in `files_to_modify` against the `key_files` and `relevant_modules` paths in context_pack.yaml. If a path doesn't appear there, either:
+21. **Every `files_to_modify` path MUST exist in `context_pack.yaml`** — before writing task_specs.yaml, cross-check every path in `files_to_modify` against the `key_files` and `relevant_modules` paths in context_pack.yaml. If a path doesn't appear there, either:
     - Find the correct path from context_pack, or
     - Flag it as `[UNVERIFIED]` in the task description so the validator catches it
-18. **Every `files_to_create` path MUST follow existing directory structure** — new files must be placed in directories that exist in context_pack. Do not invent new directory paths.
-19. **Every `reference_file` MUST exist in context_pack key_files** — do not reference files you haven't confirmed exist. If no reference exists, omit the field rather than guess.
-20. **Every `requirement_ids` MUST trace to the RFC requirements table** — tasks without requirement_ids will fail validation. If a task doesn't map to a numbered RFC requirement, it shouldn't exist.
+22. **Every `files_to_create` path MUST follow existing directory structure** — new files must be placed in directories that exist in context_pack. Do not invent new directory paths.
+23. **Every `reference_file` MUST exist in context_pack key_files** — do not reference files you haven't confirmed exist. If no reference exists, omit the field rather than guess.
+24. **Every `requirement_ids` MUST trace to the RFC requirements table** — tasks without requirement_ids will fail validation. If a task doesn't map to a numbered RFC requirement, it shouldn't exist.

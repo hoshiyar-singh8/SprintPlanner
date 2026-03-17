@@ -89,6 +89,12 @@ Background knowledge for agents and hooks that validate pipeline artifacts.
 - Tasks are in topological order
 - Single-layer principle: each task's layer is singular (not mixed)
 - SP distribution is reasonable (majority should be 1-2)
+**Model task checks:**
+- Model/API layer tasks use `Decodable` (not `Codable`) for response-only structs
+- Model struct names are not over-qualified (e.g., `RenewalApiModel` not `PlanPolicyRenewalApiModel`)
+- Model tasks that create new structs do NOT also wire them into existing types (separate tasks)
+- Every field listed in a model task traces to a specific JSON object in the RFC/API contract
+- No "for future use" fields (e.g., `is_removable` if explicitly out of scope)
 
 ### Stage 5: task_specs.yaml (with execution_mode)
 **Structural:**
