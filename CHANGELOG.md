@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.4.6 (2026-03-17)
+
+### Added: Push Log with Clickable Jira Links
+
+- After pushing tickets, generates `push_log.md` with a table of all created tickets and clickable Jira URLs
+- Updates `pipeline_state.yaml` with `push_status: pushed` (or `partial` if some failed)
+- Console output shows URLs as tickets are created
+- Appends to existing log when pushing in multiple rounds (e.g., HeroGen first, Human later)
+
 ## v1.4.5 (2026-03-17)
 
 ### Fixed: Smart Resume — Detect Unpushed Tickets
