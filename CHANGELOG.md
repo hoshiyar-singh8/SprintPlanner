@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.2 (2026-03-17)
+
+### Fixed: Pipeline Reliability
+
+- **Stage 0 interactive Q&A** — enforced one-question-at-a-time flow with explicit "STOP and wait" after each step. Stage 0 now feels like a natural conversation, not a batch job.
+- **Stage 4→5 sequential execution** — classifier can no longer launch in parallel with the breakdown agent. Added validation gate between stages.
+- **YAML schema contract** — added explicit field name spec to prevent agent drift (`id` not `task_id`, `execution_mode.type` not `mode`). Validators reject non-conforming fields.
+
 ## v1.4.1 (2026-03-17)
 
 ### Added: Self-Updating Upgrade Path
