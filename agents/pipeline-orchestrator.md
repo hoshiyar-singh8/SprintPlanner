@@ -45,15 +45,21 @@ Before starting intake, detect which MCP servers are available. This determines 
 **Figma MCP** — needed only if the user provides Figma URLs:
 - Try listing MCP tools. If `get_design_context` or `get_metadata` tools are unavailable:
   - Tell user: "Figma MCP is not installed. You can either:
-    1. Install it: `claude mcp add figma -- npx -y @anthropic-ai/figma-mcp`
+    1. Install it now: `claude mcp add figma -s user -- npx -y figma-developer-mcp --figma-api-key=YOUR_KEY --stdio`
     2. Skip Figma analysis and provide design specs manually"
   - If user provided Figma URLs, warn that designs will be skipped unless MCP is installed
+
+**Atlassian MCP** — enhances Jira integration (optional, pipeline works without it via REST API hooks):
+- If Atlassian MCP tools are available, the pipeline can use them for richer Jira interactions (query boards, read existing tickets, check sprint status)
+- If not available, the pipeline falls back to `jira_auto_config.py` and `create_jira_tickets.py` REST API hooks — fully functional without MCP
+- To install: `claude mcp add atlassian -s user -e ATLASSIAN_SITE_URL=... -e ATLASSIAN_USER_EMAIL=... -e ATLASSIAN_API_TOKEN=... -- npx -y atlassian-mcp --stdio`
 
 Store MCP availability in feature_input.yaml:
 ```yaml
 mcp_status:
   github: available | unavailable | not_needed
   figma: available | unavailable | not_needed
+  atlassian: available | unavailable | not_needed
 ```
 
 ## Stage Execution Pattern

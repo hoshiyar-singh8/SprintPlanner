@@ -4,7 +4,7 @@ set -euo pipefail
 # SprintPlanner installer — copies pipeline into ~/.claude/
 # Usage: ./install.sh [--uninstall] [--version]
 
-VERSION="1.3.2"
+VERSION="1.4.0"
 
 CLAUDE_DIR="$HOME/.claude"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -245,24 +245,136 @@ echo "  - $(ls "$SCRIPT_DIR"/agents/*.md | wc -l | tr -d ' ') agents"
 echo "  - $(ls "$SCRIPT_DIR"/hooks/*.py | wc -l | tr -d ' ') hooks"
 echo "  - PostToolUse validation hook"
 
-# Check optional MCP dependencies
+# --- MCP Server Setup ---
 echo ""
-echo "Optional MCP servers (checked at runtime, not required for local repos):"
+echo "MCP Server Setup"
+echo "━━━━━━━━━━━━━━━━"
+echo "SprintPlanner uses 3 optional MCP servers. I'll check each one"
+echo "and offer to install any that are missing."
+echo ""
 
-# GitHub MCP — needed for remote repo scanning
-if claude mcp list 2>/dev/null | grep -qi "github"; then
-  echo -e "  ${GREEN}[installed]${NC} GitHub MCP — remote repo scanning"
-else
-  echo -e "  ${YELLOW}[not found]${NC} GitHub MCP — needed for scanning GitHub repos without cloning"
-  echo "              Install: claude mcp add github -- npx -y @anthropic-ai/github-mcp"
-fi
+# Check prerequisites for MCP installation
+HAS_CLAUDE=false
+HAS_NPX=false
+if command -v claude &>/dev/null; then HAS_CLAUDE=true; fi
+if command -v npx &>/dev/null; then HAS_NPX=true; fi
 
-# Figma MCP — needed for design analysis
-if claude mcp list 2>/dev/null | grep -qi "figma"; then
-  echo -e "  ${GREEN}[installed]${NC} Figma MCP — design analysis"
+if [[ "$HAS_CLAUDE" == false ]]; then
+  echo -e "${YELLOW}Claude CLI not found — skipping MCP setup.${NC}"
+  echo "  Install Claude Code first, then re-run ./install.sh to set up MCPs."
+elif [[ "$HAS_NPX" == false ]]; then
+  echo -e "${YELLOW}npx not found — skipping MCP setup.${NC}"
+  echo "  Install Node.js (https://nodejs.org), then re-run ./install.sh to set up MCPs."
 else
-  echo -e "  ${YELLOW}[not found]${NC} Figma MCP — needed for analyzing Figma designs"
-  echo "              Install: claude mcp add figma -- npx -y @anthropic-ai/figma-mcp"
+
+  # Helper: check if an MCP is already installed
+  mcp_installed() {
+    claude mcp list 2>/dev/null | grep -qi "$1"
+  }
+
+  # Helper: case-insensitive yes check (works on macOS bash 3)
+  is_yes() {
+    case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+      y|yes) return 0 ;; *) return 1 ;;
+    esac
+  }
+
+  MCPS_INSTALLED=0
+  MCPS_SKIPPED=0
+
+  # ── 1. GitHub MCP ──────────────────────────────────────────────
+  echo -e "1/3 ${GREEN}GitHub MCP${NC} — scan remote repos without cloning"
+  if mcp_installed "github"; then
+    echo -e "     ${GREEN}[already installed]${NC}"
+    MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
+  else
+    echo -n "     Install? (y/n): "
+    read -r ans
+    if is_yes "$ans"; then
+      echo -n "     GitHub Personal Access Token (create at https://github.com/settings/tokens): "
+      read -rs gh_token
+      echo ""
+      if [[ -n "$gh_token" ]]; then
+        claude mcp add github -s user -e GITHUB_PERSONAL_ACCESS_TOKEN="$gh_token" -- npx -y @modelcontextprotocol/server-github 2>&1 | sed 's/^/     /'
+        echo -e "     ${GREEN}[installed]${NC}"
+        MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
+      else
+        echo -e "     ${YELLOW}[skipped — no token provided]${NC}"
+        MCPS_SKIPPED=$((MCPS_SKIPPED + 1))
+      fi
+    else
+      echo -e "     ${YELLOW}[skipped]${NC}"
+      MCPS_SKIPPED=$((MCPS_SKIPPED + 1))
+    fi
+  fi
+  echo ""
+
+  # ── 2. Figma MCP ───────────────────────────────────────────────
+  echo -e "2/3 ${GREEN}Figma MCP${NC} — analyze Figma designs for UI tasks"
+  if mcp_installed "figma"; then
+    echo -e "     ${GREEN}[already installed]${NC}"
+    MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
+  else
+    echo -n "     Install? (y/n): "
+    read -r ans
+    if is_yes "$ans"; then
+      echo -n "     Figma API Key (create at https://www.figma.com/developers/api#access-tokens): "
+      read -rs figma_key
+      echo ""
+      if [[ -n "$figma_key" ]]; then
+        claude mcp add figma -s user -- npx -y figma-developer-mcp --figma-api-key="$figma_key" --stdio 2>&1 | sed 's/^/     /'
+        echo -e "     ${GREEN}[installed]${NC}"
+        MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
+      else
+        echo -e "     ${YELLOW}[skipped — no key provided]${NC}"
+        MCPS_SKIPPED=$((MCPS_SKIPPED + 1))
+      fi
+    else
+      echo -e "     ${YELLOW}[skipped]${NC}"
+      MCPS_SKIPPED=$((MCPS_SKIPPED + 1))
+    fi
+  fi
+  echo ""
+
+  # ── 3. Atlassian MCP ───────────────────────────────────────────
+  echo -e "3/3 ${GREEN}Atlassian MCP${NC} — read/create Jira tickets and Confluence pages"
+  if mcp_installed "atlassian"; then
+    echo -e "     ${GREEN}[already installed]${NC}"
+    MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
+  else
+    echo -n "     Install? (y/n): "
+    read -r ans
+    if is_yes "$ans"; then
+      echo -n "     Atlassian Site URL (e.g., https://your-org.atlassian.net): "
+      read -r atl_url
+      echo -n "     Atlassian Email: "
+      read -r atl_email
+      echo -n "     Atlassian API Token (create at https://id.atlassian.net/manage-profile/security/api-tokens): "
+      read -rs atl_token
+      echo ""
+      if [[ -n "$atl_url" && -n "$atl_email" && -n "$atl_token" ]]; then
+        claude mcp add atlassian -s user \
+          -e ATLASSIAN_SITE_URL="$atl_url" \
+          -e ATLASSIAN_USER_EMAIL="$atl_email" \
+          -e ATLASSIAN_API_TOKEN="$atl_token" \
+          -- npx -y atlassian-mcp --stdio 2>&1 | sed 's/^/     /'
+        echo -e "     ${GREEN}[installed]${NC}"
+        MCPS_INSTALLED=$((MCPS_INSTALLED + 1))
+      else
+        echo -e "     ${YELLOW}[skipped — missing credentials]${NC}"
+        MCPS_SKIPPED=$((MCPS_SKIPPED + 1))
+      fi
+    else
+      echo -e "     ${YELLOW}[skipped]${NC}"
+      MCPS_SKIPPED=$((MCPS_SKIPPED + 1))
+    fi
+  fi
+
+  echo ""
+  echo "MCP setup: ${MCPS_INSTALLED} installed, ${MCPS_SKIPPED} skipped"
+  if [[ "$MCPS_SKIPPED" -gt 0 ]]; then
+    echo "  Re-run ./install.sh anytime to set up skipped MCPs."
+  fi
 fi
 
 echo ""

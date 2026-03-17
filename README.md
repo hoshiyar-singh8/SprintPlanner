@@ -1,6 +1,6 @@
 # SprintPlanner
 
-[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.3.2**
+[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.4.0**
 
 An AI-powered sprint planning pipeline for Claude Code. Works with **any codebase** — iOS, Android, Web, Backend, Flutter, or anything else. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
 
@@ -43,14 +43,15 @@ Every artifact is validated automatically:
 - [Claude Code](https://claude.ai/code) installed
 - Python 3 with PyYAML (`pip3 install pyyaml`)
 
-**Optional MCP servers** (the installer checks for these):
+**Optional MCP servers** (the installer offers to set these up automatically):
 
-| MCP | When needed | Install |
-|-----|------------|---------|
-| GitHub MCP | Scanning remote repos without cloning | `claude mcp add github -- npx -y @anthropic-ai/github-mcp` |
-| Figma MCP | Analyzing Figma designs | `claude mcp add figma -- npx -y @anthropic-ai/figma-mcp` |
+| MCP | When needed | What it enables |
+|-----|------------|----------------|
+| GitHub MCP | Remote repos | Scan GitHub repos without cloning |
+| Figma MCP | Design analysis | Extract components, tokens, layouts from Figma |
+| Atlassian MCP | Jira integration | Read/create tickets, query sprints, manage boards |
 
-These are only needed if you use GitHub URLs or Figma URLs. For local repos without Figma, no MCPs are required.
+The installer detects missing MCPs and walks you through setup with credential prompts. You can skip any and re-run `./install.sh` later to add them.
 
 ### Install
 

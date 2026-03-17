@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.4.0 (2026-03-17)
+
+### Added: Automated MCP Installation
+
+- `install.sh` — interactive MCP setup: detects missing MCPs, prompts to install with credential collection
+  - **GitHub MCP** (`@modelcontextprotocol/server-github`) — prompts for GitHub PAT
+  - **Figma MCP** (`figma-developer-mcp`) — prompts for Figma API key
+  - **Atlassian MCP** (`atlassian-mcp`) — prompts for site URL, email, API token
+- All MCPs installed as user-scoped (`-s user`) so they work across all projects
+- Skipped MCPs can be installed later by re-running `./install.sh`
+- macOS bash 3 compatible (no `${var,,}` bashisms)
+
+### Improved
+- `pipeline-orchestrator` — MCP health check now includes Atlassian MCP awareness; falls back to REST API hooks when MCP unavailable
+- `run-pipeline` SKILL.md — updated MCP install commands with correct package names
+- `README.md` — MCP table updated to reflect automated setup
+
 ## v1.3.2 (2026-03-17)
 
 ### Improved: New User Onboarding

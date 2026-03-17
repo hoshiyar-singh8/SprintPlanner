@@ -41,11 +41,13 @@ All arguments are optional — if not provided, you'll ask for them.
 Before starting Stage 0, check which MCP servers are available:
 
 - **GitHub MCP** — needed for scanning remote repos. If user gives a GitHub URL and MCP is missing, guide them:
-  `claude mcp add github -- npx -y @anthropic-ai/github-mcp`
+  `claude mcp add github -s user -e GITHUB_PERSONAL_ACCESS_TOKEN=... -- npx -y @modelcontextprotocol/server-github`
   Or suggest switching to a local clone.
 - **Figma MCP** — needed for design analysis. If user provides Figma URLs and MCP is missing, guide them:
-  `claude mcp add figma -- npx -y @anthropic-ai/figma-mcp`
+  `claude mcp add figma -s user -- npx -y figma-developer-mcp --figma-api-key=YOUR_KEY --stdio`
   Or proceed without Figma and note UI tasks will be approximate.
+- **Atlassian MCP** — enhances Jira integration. If missing, pipeline falls back to REST API hooks (fully functional). To install:
+  `claude mcp add atlassian -s user -e ATLASSIAN_SITE_URL=... -e ATLASSIAN_USER_EMAIL=... -e ATLASSIAN_API_TOKEN=... -- npx -y atlassian-mcp --stdio`
 
 ### Stage 0: Intake
 
