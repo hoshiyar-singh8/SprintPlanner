@@ -215,28 +215,95 @@ Edit `skills/task-decomposition-rules/SKILL.md` to adjust layer definitions and 
 
 ```mermaid
 flowchart TD
-    Hook["PostToolUse: validate_artifact\n(auto-fires on every Write)"] -.-> S0
+    Hook["PostToolCall:\nvalidate_artifact.py\nauto-fires on every Write\ntool call"]
+    Entry(["run-pipeline"])
 
-    S0["0. Intake"] --> S1
-    S1["1. Discovery"] -->|"validate_input\nvalidate_clarifications"| CP1
-    CP1{{"CP1 — Q&A\n(user answers questions)"}} --> S2
-    S2["2. Context"] -->|"compress_context\nvalidate_context"| S3
-    S3["3. Planning"] -->|"validate_plan"| CP2
-    CP2{{"CP2 — Plan\n(user approves plan)"}} --> S4
-    S4["4. Breakdown"] -->|"validate_task_specs"| S5
-    S5["5. Classify"] -->|"validate_classification"| CP3
-    CP3{{"CP3 — Tasks\n(user reviews classifications)"}} --> S6
-    S6["6. Jira Write"] -->|"render_jira_payload"| S7
-    S7["7. Quality Gate"] -->|"quality_gate"| CP4
-    CP4{{"CP4 — Review\n(final review)"}} --> S8
-    S8["8. Push Strategy"] --> Done["Complete"]
+    Entry --> S0
+    Hook -.-> S0
 
-    style Hook fill:#f3e8ff,stroke:#7c3aed
-    style CP1 fill:#fef3c7,stroke:#d97706
-    style CP2 fill:#fef3c7,stroke:#d97706
-    style CP3 fill:#fef3c7,stroke:#d97706
-    style CP4 fill:#fef3c7,stroke:#d97706
-    style Done fill:#d1fae5,stroke:#059669
+    S0(["0 Intake"])
+
+    S0 -->|"validate_input.py"| S1
+
+    S1["1 Discovery sonnet\nrfc-reading\nclarifying-question-rules"]
+
+    S1 -->|"validate_clarifications.py"| CP1
+
+    CP1{"CP1 — Q&A"}
+
+    CP1 --> S2
+
+    S2["2 Context sonnet\nrepo-context-gathering\nfigma-analysis\nbento-token-mapping"]
+
+    S2 -->|"compress + validate_context.py"| S3
+
+    S3["3 Planning opus\nmobile-architecture-rules\nstory-point-sizing"]
+
+    S3 -->|"validate_plan.py"| CP2
+
+    CP2{"CP2 — Approve Plan"}
+
+    CP2 --> S4
+
+    S4["4 Breakdown sonnet\ntask-decomposition-rules\nstory-point-sizing\ndependency-mapping"]
+
+    S4 -->|"validate_task_specs.py"| S5
+
+    S5["5 Classify sonnet\nherogen-task-safety"]
+
+    S5 -->|"validate_classification.py"| CP3
+
+    CP3{"CP3 — Review Tasks"}
+
+    CP3 --> S6
+
+    S6["6 Jira Write sonnet\njira-ticket-standard\nbento-token-mapping"]
+
+    S6 -->|"render_jira_payload.py"| S7
+
+    S7["7 Quality Gate sonnet\nvalidation-rules\ndependency-mapping"]
+
+    S7 -->|"quality_gate.py"| CP4
+
+    CP4{"CP4 — Final Review"}
+
+    CP4 --> S8
+
+    S8["8 Push Strategy\nplan_push_strategy.py\ncreate_jira_tickets.py"]
+
+    S8 --> Done(["Complete"])
+
+    S1 -.->|fail| Retry
+    S2 -.->|fail| Retry
+    S3 -.->|fail| Retry
+    S4 -.->|fail| Retry
+    S5 -.->|fail| Retry
+    S6 -.->|fail| Retry
+    S7 -.->|fail| Retry
+
+    Retry["Retry agent\nretry_memory.yaml\nmax 2x"]
+
+    Retry -.->|"fix + resume"| S1
+    Retry -.->|"still failing"| Escalate(["Escalate to User"])
+
+    style Hook fill:#fffde7,stroke:#f9a825
+    style Entry fill:#424242,stroke:#212121,color:#fff
+    style S0 fill:#424242,stroke:#212121,color:#fff
+    style S1 fill:#424242,stroke:#212121,color:#fff
+    style S2 fill:#424242,stroke:#212121,color:#fff
+    style S3 fill:#c62828,stroke:#b71c1c,color:#fff
+    style S4 fill:#424242,stroke:#212121,color:#fff
+    style S5 fill:#424242,stroke:#212121,color:#fff
+    style S6 fill:#424242,stroke:#212121,color:#fff
+    style S7 fill:#424242,stroke:#212121,color:#fff
+    style S8 fill:#424242,stroke:#212121,color:#fff
+    style CP1 fill:#fdd835,stroke:#f9a825,color:#000
+    style CP2 fill:#fdd835,stroke:#f9a825,color:#000
+    style CP3 fill:#fdd835,stroke:#f9a825,color:#000
+    style CP4 fill:#fdd835,stroke:#f9a825,color:#000
+    style Done fill:#c8e6c9,stroke:#388e3c,color:#000
+    style Retry fill:#fff3e0,stroke:#e65100,color:#000
+    style Escalate fill:#ffcdd2,stroke:#c62828,color:#000
 ```
 
 Failed stages retry up to 2x with memory, then escalate to the user.
