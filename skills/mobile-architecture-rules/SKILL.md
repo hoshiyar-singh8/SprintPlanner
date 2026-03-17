@@ -182,6 +182,29 @@ Before naming a new struct, check what suffix the TARGET FILE already uses. If `
 - Place new structs near related existing structs, not at the end of the file.
 - Creating separate files for each model is acceptable for larger features but not required for 2-3 small structs.
 
+## Error Handling Patterns — Inline vs Modal
+
+B2C has TWO distinct error handling patterns. Do NOT confuse them:
+
+### 1. Top-level error responses (modal pipeline)
+- API returns non-200 `status_code` or an `exception` field in the response
+- Client maps exception string via `*ExceptionType` enum (e.g., `PartnershipsExceptionType`)
+- Error is displayed as a **modal** (alert, error screen, or error overlay)
+- `messageKey` is derived: `"NEXTGEN_" + exceptionType.rawValue`
+
+### 2. Layout-inline errors (SDUI component pipeline)
+- API returns `status_code: 200` — it's a successful response
+- Error text is carried **inside a layout component** field (e.g., `VOUCHER_BOTTOM_SHEET.input.error`)
+- Error is a `DynamicStringRawObject` (localisation key), resolved via existing dynamic string pipeline
+- Error is displayed **inline** in the component (e.g., beneath an input field)
+- Does NOT go through `*ExceptionType` enum at all
+
+### How to classify when reading an RFC
+- If the RFC shows a non-200 response with an `exception` field → top-level error → add to `*ExceptionType` enum
+- If the RFC shows a 200 response with error text inside a layout component field → inline error → parse in factory method
+- Do NOT assume one pattern when the RFC shows the other
+- Do NOT hallucinate exception types — only add exceptions that appear in RFC JSON examples
+
 ## What not to assume
 
 - not every B2C feature is classic VIPER

@@ -225,6 +225,15 @@ Read `ui_scope` from `feature_input.yaml`:
   - Each factory method task must list ALL fields from the RFC layout JSON example
 21e. **Layout component fields are parsed via `data["key"] as? Type`** — not via Codable. Factory methods use dictionary casting. Missing keys return nil. Include this pattern in the task description.
 
+### Error Handling — Inline vs Modal
+
+21f. **Distinguish inline errors from modal errors** — when the RFC shows error handling, classify it:
+  - **200 response with error in layout component field** (e.g., `VOUCHER_BOTTOM_SHEET.input.error`) → inline error → handle in factory method, NOT via `*ExceptionType` enum
+  - **Non-200 response with `exception` field** → modal error → add case to `*ExceptionType` enum
+  - Do NOT create `*ExceptionType` enum tasks for inline errors — they are parsed by the layout factory
+21g. **Do NOT hallucinate exception types** — only add exception enum cases that appear as `exception` strings in RFC error response examples. If the RFC shows ONE error string, create ONE case, not five guessed variants.
+21h. **Layout component error fields are DynamicStringRawObject** — when the RFC JSON shows `"error": { "text": "..." }`, the type is `DynamicStringRawObject` (has `text` field), NOT plain `String`. Match the JSON structure exactly.
+
 ### Anti-Hallucination: File Path Validation
 
 21. **Every `files_to_modify` path MUST exist in `context_pack.yaml`** — before writing task_specs.yaml, cross-check every path in `files_to_modify` against the `key_files` and `relevant_modules` paths in context_pack.yaml. If a path doesn't appear there, either:
