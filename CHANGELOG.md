@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.4.4 (2026-03-17)
+
+### Fixed: Eliminate Security Warnings in Pipeline Agents
+
+- All 9 agents now have **Tool Usage Rules** banning inline Python (`python3 -c "..."`) and `${VAR}` Bash substitution — both trigger Claude Code security prompts
+- Agents must use Read/Write tools for file I/O and `printenv` for env var checks
+- Orchestrator Jira credential check uses `printenv` instead of `${JIRA_*:-NOT_SET}` pattern
+
 ## v1.4.3 (2026-03-17)
 
 ### Fixed: MCP Prerequisite Gate
