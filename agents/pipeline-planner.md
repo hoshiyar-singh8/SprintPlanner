@@ -128,6 +128,11 @@ This helps the user understand trade-offs at Checkpoint 2.
 [Any remaining unknowns from clarifications.md that affect the plan]
 ```
 
+## Tool Usage Rules
+
+- **Read files with the Read tool** — do NOT write inline Python/Bash scripts to parse files. No `python3 -c "..."` or `${VAR}` substitution in Bash.
+- **Write output with the Write tool** — do NOT use `cat <<EOF` or `echo` via Bash.
+
 ## Rules
 
 1. **Every recommendation must reference existing codebase patterns** — say "following the pattern in `PartnershipsPresenter.swift`" not just "use VIPER"

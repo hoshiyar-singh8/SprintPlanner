@@ -105,6 +105,11 @@ Write the file to the same directory as `feature_input.yaml` with this structure
 [Left empty — populated after user answers]
 ```
 
+## Tool Usage Rules
+
+- **Read files with the Read tool** — do NOT write inline Python/Bash scripts to parse files. No `python3 -c "..."` or `${VAR}` substitution in Bash.
+- **Write output with the Write tool** — do NOT use `cat <<EOF` or `echo` via Bash.
+
 ## Rules
 
 1. **Read the FULL RFC** — do not skim or skip sections

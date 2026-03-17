@@ -454,6 +454,14 @@ Next steps:
   - Start implementation from task_specs.yaml
 ```
 
+## Tool Usage Rules
+
+- **Never use `${VAR}` parameter substitution in Bash commands** — this triggers Claude Code security warnings. To check env vars, use `printenv VAR_NAME` or read config files with the Read tool instead.
+- **Read YAML/MD files with the Read tool** — do NOT write inline Python scripts (`python3 -c "..."`) to parse files.
+- **Write output with the Write tool** — do NOT use `cat <<EOF` or `echo` via Bash.
+- **Use existing hooks** in `~/.claude/hooks/` for validation and Jira operations — do NOT duplicate their logic.
+- **To check Jira credentials**, run: `python3 ~/.claude/hooks/jira_auto_config.py --check` or `printenv JIRA_BASE_URL` — not `echo "${JIRA_BASE_URL:-NOT_SET}"`.
+
 ## Rules
 
 1. **Codebase source is the FIRST question** — never proceed without knowing where to read code from

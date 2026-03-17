@@ -187,6 +187,11 @@ These skills are now installed and will be used by the pipeline.
 Ready to proceed with Stage 1.
 ```
 
+## Tool Usage Rules
+
+- **Read files with the Read tool** — do NOT write inline Python/Bash scripts to parse files. No `python3 -c "..."` or `${VAR}` substitution in Bash.
+- **Write output with the Write tool** — do NOT use `cat <<EOF` or `echo` via Bash.
+
 ## Rules
 
 1. **Read before writing** — never generate skills from assumptions. Every claim must be backed by a file you read.
