@@ -338,18 +338,26 @@ is_yes() {
   esac
 }
 
-# Helper: check if an MCP is already in ~/.claude.json
+# Helper: check if an MCP is already in ALL projects in ~/.claude.json
 mcp_exists_global() {
   python3 -c "
 import json, sys
 with open('$CLAUDE_JSON') as f:
     data = json.load(f)
-mcps = data.get('mcpServers', {})
-sys.exit(0 if '$1' in mcps else 1)
+# Check all projects — MCP must exist in every project
+projects = data.get('projects', {})
+if not projects:
+    sys.exit(1)
+for path, pdata in projects.items():
+    if isinstance(pdata, dict):
+        mcps = pdata.get('mcpServers', {})
+        if '$1' not in mcps:
+            sys.exit(1)
+sys.exit(0)
 " 2>/dev/null
 }
 
-# Helper: add an MCP to ~/.claude.json globally
+# Helper: add an MCP to EVERY project in ~/.claude.json (this is how Claude Code reads MCPs)
 add_mcp_global() {
   local name="$1"
   local mcp_type="$2"
@@ -358,12 +366,24 @@ add_mcp_global() {
 import json
 with open('$CLAUDE_JSON', 'r') as f:
     data = json.load(f)
+mcp_entry = {'type': '$mcp_type', 'url': '$url'}
+# Add to top-level mcpServers
 if 'mcpServers' not in data:
     data['mcpServers'] = {}
-data['mcpServers']['$name'] = {'type': '$mcp_type', 'url': '$url'}
+data['mcpServers']['$name'] = mcp_entry
+# Add to every existing project (Claude Code reads MCPs per-project)
+projects = data.get('projects', {})
+count = 0
+for path, pdata in projects.items():
+    if isinstance(pdata, dict):
+        if 'mcpServers' not in pdata:
+            pdata['mcpServers'] = {}
+        if '$name' not in pdata['mcpServers']:
+            pdata['mcpServers']['$name'] = mcp_entry
+            count += 1
 with open('$CLAUDE_JSON', 'w') as f:
     json.dump(data, f, indent=2)
-print('  Added $name to ~/.claude.json')
+print(f'  Added $name to {count} projects + global config')
 "
 }
 
