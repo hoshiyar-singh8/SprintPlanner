@@ -158,6 +158,18 @@ This codebase uses Server-Driven UI (SDUI) with two distinct JSON layers:
 - New component types need: enum case + switch case + factory method
 - Fields parsed with `data["key"] as? Type` — missing keys return nil, no crash
 
+### Naming Convention — Suffix Depends on File Location
+
+Model struct naming depends on WHERE the struct lives in the module:
+
+| Location | Suffix | Example |
+|----------|--------|---------|
+| `Source/Api/Models/` | `ApiModel` | `SubscriptionApiModel`, `LayoutApiModel`, `EnrolmentPlanApiModel` |
+| `Source/Views/*/` (data structs) | `DataModel` | `LayoutPlanDataModel`, `VoucherDataModel`, `PlanPolicyDataModel` |
+| `Source/Views/*/` (UI display) | `ViewModel` | `PartnershipsViewModel`, `SelectPlanViewModel` |
+
+Before naming a new struct, check what suffix the TARGET FILE already uses. If `LayoutPlanDataModel` is in the same file, use `DataModel`. Do NOT use `ApiModel` for structs outside `Api/Models/`.
+
 ### CodingKeys
 
 - Always provide explicit `CodingKeys` when JSON uses snake_case and Swift uses camelCase.
@@ -166,7 +178,7 @@ This codebase uses Server-Driven UI (SDUI) with two distinct JSON layers:
 
 ### Placement
 
-- API model structs for a feature go in the same file as related models (e.g., alongside `LayoutPlanDataModel` in `PartnershipsViewModel.swift`).
+- Data model structs for a feature go in the same file as related models (e.g., alongside `LayoutPlanDataModel` in `PartnershipsViewModel.swift`).
 - Place new structs near related existing structs, not at the end of the file.
 - Creating separate files for each model is acceptable for larger features but not required for 2-3 small structs.
 
