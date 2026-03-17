@@ -1,6 +1,6 @@
 # SprintPlanner
 
-[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.2.0**
+[![CI](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml/badge.svg)](https://github.com/hoshiyar-singh8/SprintPlanner/actions/workflows/ci.yml) **v1.3.0**
 
 An AI-powered sprint planning pipeline for Claude Code. Works with **any codebase** — iOS, Android, Web, Backend, Flutter, or anything else. Converts RFC/PRD documents into implementation-ready Jira tickets through 8 automated stages with human checkpoints.
 
@@ -157,7 +157,7 @@ Generated skills are saved to `~/.claude/skills/` and reused across future pipel
 | `pipeline-jira-writer` | Sonnet | Writes Jira ticket descriptions |
 | `pipeline-validator` | Sonnet | Cross-checks all artifacts |
 
-### Hooks (12)
+### Hooks (13)
 
 | Hook | Trigger |
 |------|---------|
@@ -170,8 +170,9 @@ Generated skills are saved to `~/.claude/skills/` and reused across future pipel
 | `validate_task_specs.py` | After Stage 4 |
 | `validate_classification.py` | After Stage 5 |
 | `render_jira_payload.py` | After Stage 6 (generates Jira API JSON) |
-| `jira_auto_config.py` | Stage 0 (auto-discovers Jira project config via API) |
-| `create_jira_tickets.py` | Optional post-pipeline (pushes tickets to Jira API) |
+| `jira_auto_config.py` | Stage 0 (auto-discovers Jira project config + sprints via API) |
+| `plan_push_strategy.py` | Stage 8 (plans which tickets to push based on strategy) |
+| `create_jira_tickets.py` | Stage 8 (pushes tickets to Jira API with filtering + sprint) |
 | `quality_gate.py` | After Stage 7 (final cross-file checks) |
 
 ## Customization
@@ -264,19 +265,34 @@ Failed stages retry up to 2x with memory, then escalate to the user.
 
 ## Push Tickets to Jira
 
-After the pipeline completes, you can push tickets directly to Jira:
+After the pipeline completes, the orchestrator offers 6 push strategies:
+
+| Strategy | What it does |
+|----------|-------------|
+| **Full plan** | Push all tickets |
+| **Sprint capacity** | Fill up to N SP in dependency order |
+| **HeroGen only** | Push bot-safe tickets + their dependencies |
+| **Human only** | Push human-required tickets + their dependencies |
+| **Cherry-pick** | Push specific task IDs + their dependencies |
+| **Skip** | Save for later |
+
+### Manual push
 
 ```bash
-# Preview what would be created
-python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/ --dry-run
+# Plan a push strategy
+python3 ~/.claude/hooks/plan_push_strategy.py .ai/features/my-feature/ --strategy sprint_capacity --capacity 13
 
-# Create tickets for real
-python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/
+# Preview what would be created
+python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/ --push-plan push_plan.yaml --dry-run
+
+# Create tickets with sprint assignment
+python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/ --push-plan push_plan.yaml --sprint 42
+
+# Or filter directly without a push plan
+python3 ~/.claude/hooks/create_jira_tickets.py .ai/features/my-feature/ --filter herogen --dry-run
 ```
 
 Requires env vars: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
-
-The pipeline also offers to push after the quality gate passes (Checkpoint 4).
 
 ## Testing
 
@@ -287,7 +303,7 @@ cd SprintPlanner
 python3 -m unittest discover -s tests -v
 ```
 
-42 tests cover all validation hooks, the Jira payload renderer, and the quality gate.
+56 tests cover all validation hooks, the Jira payload renderer, quality gate, and push strategy.
 
 ## License
 

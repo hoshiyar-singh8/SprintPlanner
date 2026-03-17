@@ -190,3 +190,12 @@ Read `ui_scope` from `feature_input.yaml`:
 14. **Cleanup tasks MUST include call-site removal** — removing a flag also means removing empty wrappers and their callers. List all affected files.
 15. **Keep files_to_modify ≤ 3** for Hero Gen tasks — tasks modifying 4+ existing files should be human or split further.
 16. **No "for future use" parameters** — do not include acceptance criteria that add unused parameters or stubs for future work.
+
+### Anti-Hallucination: File Path Validation
+
+17. **Every `files_to_modify` path MUST exist in `context_pack.yaml`** — before writing task_specs.yaml, cross-check every path in `files_to_modify` against the `key_files` and `relevant_modules` paths in context_pack.yaml. If a path doesn't appear there, either:
+    - Find the correct path from context_pack, or
+    - Flag it as `[UNVERIFIED]` in the task description so the validator catches it
+18. **Every `files_to_create` path MUST follow existing directory structure** — new files must be placed in directories that exist in context_pack. Do not invent new directory paths.
+19. **Every `reference_file` MUST exist in context_pack key_files** — do not reference files you haven't confirmed exist. If no reference exists, omit the field rather than guess.
+20. **Every `requirement_ids` MUST trace to the RFC requirements table** — tasks without requirement_ids will fail validation. If a task doesn't map to a numbered RFC requirement, it shouldn't exist.

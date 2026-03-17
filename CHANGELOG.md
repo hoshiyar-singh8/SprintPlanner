@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.3.0 (2026-03-17)
+
+### Added: Push Strategy
+- `plan_push_strategy.py` — new hook that plans which tickets to push based on strategy (full plan, sprint capacity, herogen only, human only, cherry-pick)
+- Sprint discovery in `jira_auto_config.py` — discovers boards, active/future sprints from Jira Agile API
+- `create_jira_tickets.py` — new flags: `--filter herogen|human|TASK-IDs`, `--sprint <id>`, `--push-plan <file>`
+- `pipeline-orchestrator` — Stage 8 push strategy with 6 options and sprint assignment
+- 14 new tests for push strategy (topological sort, capacity planning, filtering, dependency inclusion)
+
+### Improved: Anti-Hallucination
+- `validate_task_specs.py` — `requirement_ids` is now a hard error (was warning). Every task must trace to an RFC requirement.
+- `pipeline-planner` — 4 new grounding rules: every phase must cite reference files from context_pack, architecture decisions must cite real code paths, SP estimates must explain complexity signals, never reference undiscovered files
+- `pipeline-breakdown` — 4 new anti-hallucination rules: `files_to_modify` paths must exist in context_pack, `files_to_create` must follow existing directory structure, `reference_file` must exist in key_files, `requirement_ids` must trace to RFC
+
 ## v1.2.0 (2026-03-17)
 
 ### Improved (based on analysis of 60+ real HeroGen PRs — diffs, reviews, closed vs merged)

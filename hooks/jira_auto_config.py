@@ -103,6 +103,32 @@ class JiraClient:
     def get_myself(self):
         return self._get("myself")
 
+    def get_boards(self, project_key):
+        """Get boards for a project (uses Agile API)."""
+        url = (f"{self.base_url}/rest/agile/1.0/board"
+               f"?projectKeyOrId={project_key}&type=scrum")
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", f"Basic {self.auth}")
+        req.add_header("Accept", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except (urllib.error.HTTPError, urllib.error.URLError):
+            return None
+
+    def get_sprints(self, board_id, state="active,future"):
+        """Get sprints for a board (uses Agile API)."""
+        url = (f"{self.base_url}/rest/agile/1.0/board/{board_id}"
+               f"/sprint?state={state}")
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", f"Basic {self.auth}")
+        req.add_header("Accept", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except (urllib.error.HTTPError, urllib.error.URLError):
+            return None
+
 
 def detect_platform_from_component(name):
     """Map a Jira component name to a platform key."""
@@ -206,6 +232,48 @@ def generate_config(client, project_key, epic_key=None):
     if epic_key:
         config["epic_key"] = epic_key
         print(f"    Epic: {epic_key}")
+
+    # 7. Sprint discovery
+    print("  Discovering sprints...")
+    boards = client.get_boards(project_key)
+    if boards and boards.get("values"):
+        board = boards["values"][0]  # Use the first scrum board
+        board_id = board["id"]
+        config["board_id"] = board_id
+        config["board_name"] = board.get("name", "")
+        print(f"    Board: {board.get('name', '')} (id: {board_id})")
+
+        sprints = client.get_sprints(board_id)
+        if sprints and sprints.get("values"):
+            sprint_list = []
+            for s in sprints["values"]:
+                sprint_info = {
+                    "id": s["id"],
+                    "name": s.get("name", ""),
+                    "state": s.get("state", ""),
+                }
+                if s.get("startDate"):
+                    sprint_info["start_date"] = s["startDate"]
+                if s.get("endDate"):
+                    sprint_info["end_date"] = s["endDate"]
+                sprint_list.append(sprint_info)
+            config["available_sprints"] = sprint_list
+
+            # Identify current active sprint
+            active = [s for s in sprint_list if s["state"] == "active"]
+            if active:
+                config["active_sprint_id"] = active[0]["id"]
+                config["active_sprint_name"] = active[0]["name"]
+                print(f"    Active sprint: {active[0]['name']} "
+                      f"(id: {active[0]['id']})")
+
+            # List future sprints
+            future = [s for s in sprint_list if s["state"] == "future"]
+            if future:
+                print(f"    Future sprints: "
+                      f"{', '.join(s['name'] for s in future)}")
+    else:
+        print("    No scrum boards found (Kanban or no board)")
 
     return config
 

@@ -272,21 +272,81 @@ stages:
   N+1: { status: pending }
 ```
 
-## Optional: Push to Jira
+## Stage 8: Push Strategy
 
-After the quality gate passes, offer to push tickets to Jira:
+After the quality gate passes at Checkpoint 4, present the push strategy options:
 
-> "Pipeline complete! Want me to create these tickets in Jira?
-> 1. **Yes** — push all tickets now
-> 2. **Dry run** — show what would be created without creating
-> 3. **Skip** — I'll save the payload for later"
+> "Pipeline complete! How would you like to push tickets to Jira?
+>
+> 1. **Full plan** — push all [N] tickets ([X] SP)
+> 2. **Sprint capacity** — I'll fit tickets into your sprint capacity (you tell me the SP budget)
+> 3. **HeroGen only** — push only bot-safe tickets ([A] tickets, [B] SP) + their dependencies
+> 4. **Human only** — push only human-required tickets ([C] tickets, [D] SP) + their dependencies
+> 5. **Cherry-pick** — you choose specific task IDs
+> 6. **Skip** — save everything for later"
 
-If yes or dry run:
-- Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> [--dry-run]`
-- Requires `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars
-- Reports created ticket keys (e.g., `TASK-001 -> PROJ-456`)
+### Option 1: Full Plan
+- Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --dry-run`
+- Confirm with user, then: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir>`
 
-If skip: remind user they can run it manually later.
+### Option 2: Sprint Capacity
+1. Ask: "What's your sprint capacity in SP?"
+2. If `jira_config.yaml` has `available_sprints`, show them:
+   > "Available sprints:
+   >   - Sprint 42 (active, ends Mar 28)
+   >   - Sprint 43 (future, starts Mar 29)
+   > Which sprint?"
+3. Run: `python3 ~/.claude/hooks/plan_push_strategy.py <feature_dir> --strategy sprint_capacity --capacity <N>`
+4. Show the push plan to user for confirmation
+5. Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --push-plan push_plan.yaml --sprint <sprint_id> --dry-run`
+6. Confirm, then run without --dry-run
+
+### Option 3: HeroGen Only
+1. Run: `python3 ~/.claude/hooks/plan_push_strategy.py <feature_dir> --strategy herogen_only`
+2. Show plan (note: dependency tasks of other types are auto-included)
+3. Ask for sprint assignment (optional)
+4. Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --push-plan push_plan.yaml [--sprint <id>] --dry-run`
+5. Confirm, then create
+
+### Option 4: Human Only
+1. Run: `python3 ~/.claude/hooks/plan_push_strategy.py <feature_dir> --strategy human_only`
+2. Show plan
+3. Ask for sprint assignment (optional)
+4. Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --push-plan push_plan.yaml [--sprint <id>] --dry-run`
+5. Confirm, then create
+
+### Option 5: Cherry-pick
+1. Show the full task list with IDs
+2. Ask: "Which task IDs? (comma-separated, e.g., TASK-001,TASK-003,TASK-005)"
+3. Run: `python3 ~/.claude/hooks/plan_push_strategy.py <feature_dir> --strategy cherry_pick --tasks <ids>`
+4. Show plan (note: dependencies auto-included)
+5. Ask for sprint assignment (optional)
+6. Run: `python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --push-plan push_plan.yaml [--sprint <id>] --dry-run`
+7. Confirm, then create
+
+### Option 6: Skip
+- Remind user they can run manually later:
+  ```
+  python3 ~/.claude/hooks/plan_push_strategy.py <feature_dir> --strategy <strategy> [options]
+  python3 ~/.claude/hooks/create_jira_tickets.py <feature_dir> --push-plan push_plan.yaml
+  ```
+
+### Sprint Assignment
+For any push option, if the user wants sprint assignment:
+1. Check `jira_config.yaml` for `available_sprints` and `active_sprint_id`
+2. If sprints found, show them and ask which one
+3. Pass `--sprint <id>` to create_jira_tickets.py
+4. If no sprints found, ask for a sprint ID directly or skip sprint assignment
+
+### Push Confirmation
+**Always dry-run first.** Show the user:
+- Number of tickets to create
+- Total SP
+- HeroGen vs Human split
+- Sprint assignment (if any)
+- Then ask: "Create these tickets? (yes/no)"
+
+Requires `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` env vars.
 
 ## Completion Output
 

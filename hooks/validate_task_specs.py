@@ -110,10 +110,10 @@ def validate(file_path):
                         )
                         break
 
-        # Requirement traceability (optional but recommended)
+        # Requirement traceability (required — prevents hallucination)
         req_ids = task.get("requirement_ids", [])
         if not req_ids:
-            warnings.append(f"{task_id}: no requirement_ids — cannot trace to RFC")
+            errors.append(f"{task_id}: missing requirement_ids — every task must trace to an RFC requirement")
 
         # Dependencies
         depends_on = task.get("depends_on", [])

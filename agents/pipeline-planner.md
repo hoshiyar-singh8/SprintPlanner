@@ -143,3 +143,10 @@ This helps the user understand trade-offs at Checkpoint 2.
 11. **Use Figma context when available** — if figma_context has design tokens and component lists, reference them in architecture decisions and UI phases. Never plan UI work that contradicts what Figma shows.
 12. **Flag missing Figma as a risk** — if the feature has UI scope but figma_context is `not_provided` or `error`, add a risk: "UI tasks may need revision once Figma designs are analyzed"
 13. **Task Granularity Guidance is mandatory** — explicitly tell the breakdown agent what to combine and what to split. This prevents over-splitting (splitting UI states across tickets) and under-splitting (combining layers in one ticket).
+
+### Anti-Hallucination: Grounding Rules
+
+14. **Every phase MUST cite specific reference files** — for each phase, list the actual files from `context_pack.yaml` key_files that the implementer will work with. Do not reference files that don't exist in context_pack.
+15. **Architecture decisions MUST cite real code** — when stating "follow the X pattern", include the exact file path and a brief description of what that file does. Example: "Follow `Subscription/Source/Mapper/PaymentMethodViewModelMapper.swift` — maps API fields to ViewModel with explicit field enumeration."
+16. **SP estimates MUST be grounded in complexity signals** — for each phase, explain WHY the estimate is what it is (e.g., "3 SP because 2 new Codable structs + CodingKeys", not just "3 SP").
+17. **Never reference files, classes, or APIs that aren't in context_pack or the RFC** — if a plan phase needs something not yet discovered, flag it as an Open Question, don't assume it exists.
