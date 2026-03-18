@@ -280,3 +280,35 @@ Each task must have:
 - Each criterion is independently verifiable
 - No ambiguous language ("should work", "looks good")
 - Use concrete assertions ("builds without errors", "renders X when Y")
+
+## Gap Analysis Checklist
+
+**This is the #4 lesson from real ticket planning.** After creating all tickets, run this checklist to find missing work. Every gap found post-planning costs 3x more than catching it upfront.
+
+### Cross-reference RFC scope against tickets
+
+1. **Read the RFC scope checklist** — most RFCs end with a deliverables list. Check every item has a ticket.
+2. **Check every API change** — request params, response fields, new endpoints. Each needs a client ticket.
+3. **Check every UI change** — new components, modified components, new states on existing components. Verify both parsing (factory) AND rendering (view) are covered — they're often in separate tickets.
+4. **Check every flow/interaction** — deeplink → landing → bottom sheet → apply → success/error → payment. Trace end-to-end.
+5. **Check every error case** — inline errors, modal errors, edge cases. Each needs handling somewhere.
+
+### Cross-reference BE tickets for client implications
+
+6. **Read all BE tickets in the same epic** — BE tickets like "add attemptType query param" may require corresponding client tickets to pass that param. Don't assume BE changes are server-only.
+7. **Check BE tickets marked "In Progress" or "To Do"** — these represent upcoming API changes the client needs to support.
+
+### Cross-reference codebase for wiring gaps
+
+8. **IBOutlet exists ≠ wired** — an `@IBOutlet` in a xib/storyboard doesn't mean it's configured in code. Check the setter/configure method. (Example: `originalPriceView` existed in SelectPlanView but was never set.)
+9. **Factory parses ≠ View renders** — parsing a field in a layout factory and rendering it in a view are separate tickets. Don't assume parsing coverage means rendering coverage.
+10. **Protocol property exists ≠ populated** — `PaymentInputProtocol.isZeroPayment` existing doesn't mean anyone sets it to `true`. Check the factory/builder that creates the concrete instance.
+
+### Cross-reference closed tickets to avoid duplication
+
+11. **Check closed/dismissed tickets** — work may already be done. Don't create tickets for deeplink extraction if it's already merged.
+12. **Check "In Code Review" tickets** — active PRs may cover overlapping scope.
+
+### Placeholder tickets for blocked work
+
+13. **Create placeholder tickets early** for work blocked on external inputs (tracking specs, BE alignment, design specs). Define scope/out-of-scope even when details are TBD — this prevents the work from being forgotten.

@@ -264,3 +264,11 @@ Read `ui_scope` from `feature_input.yaml`:
 28. **Paste RFC JSON in every ticket** — the implementer should never have to go find the RFC section. Copy the relevant JSON example into the ticket description.
 29. **Cite existing infrastructure before proposing new code** — read the codebase to find existing views, protocols, and patterns (e.g., `PaymentInputProtocol.isZeroPayment`, `MessageView`, `SubscriptionMessageViewModel`). Use what exists. Don't invent new components.
 30. **Every ticket needs an Out of Scope section** — explicitly name what this ticket does NOT do, especially when related work is split across tickets. This prevents scope creep and makes dependencies clear.
+
+### Gap Analysis (Post-Breakdown Checklist)
+
+31. **Cross-reference RFC scope checklist against task_specs** — after writing all tasks, verify every RFC deliverable has a corresponding task. Missing items are cheaper to find now than after implementation starts.
+32. **Cross-reference BE tickets in the same epic** — BE tickets (e.g., "add attemptType query param") may require client-side tickets. Don't assume BE changes are server-only.
+33. **Verify rendering, not just parsing** — a factory that parses `original_price` from layout JSON is NOT the same as a view that renders it with strikethrough. If the IBOutlet exists but the setter doesn't configure it, the rendering is a gap. Always check: factory parses → mapper threads → view renders.
+34. **Check closed tickets before creating new ones** — if deeplink extraction, config flags, or UI components are already merged, don't create duplicate tasks. Check the epic for closed/dismissed tickets.
+35. **Create placeholder tickets for blocked work** — when waiting on tracking specs, BE alignment, or design specs, create tickets with scope/out-of-scope defined and details marked TBD. This prevents forgotten work.
